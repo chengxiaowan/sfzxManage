@@ -1,0 +1,2910 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MainMapper">
+	
+	<select id="findCj" parameterType="pd" resultType="pd">
+		select * from
+		(select count(1) khsl from customer_info a where a.delflag=0 
+			<if test="saleId !=null and saleId !=''">
+				and a.orderSaleId = #{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.orderSaleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d ') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d ') &lt;= #{endTime}
+			</if>	
+		) a,
+		(select
+				sum(f.currentMoney) hkMoney
+			from
+				order_info a 
+				inner join 
+				paymentdetail_info f
+			on a.id =f.orderId 
+			where  a.delflag=0
+			<if test="saleId !=null and saleId !=''">
+				and a.saleId=#{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.saleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d ') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d ') &lt;= #{endTime}
+			</if>	
+		) b,
+		(select
+				sum(e.debtAmount) price
+			from
+				contract_info a 
+			inner join 
+				order_info e
+				on a.id=e.contractId 
+			where a.delFlag = 0  
+			<if test="saleId !=null and saleId !=''">
+				and e.saleId = #{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and e.saleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.signingTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.signingTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>	
+		) c
+		limit 1
+	</select>
+	
+	<select id="findyyx" parameterType="pd" resultType="pd">
+			select count(1) khs from saleCustomer_info a 
+			inner join 
+		<!-- <choose>
+		<when test="saleId !=null and saleId !=''">
+			(SELECT a.* 
+						from saleprocess_info a 
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+						on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+							select user_Id from sys_user where role_id in('30b1487221464d369ca4c2462ccca920')
+						)
+				) i
+			on a.id=i.saleCustomerId and a.delflag=0 
+			where i.status &gt;=3 and i.status &lt;9  and a.iskhgh =2
+			<if test="startTime !=null and startTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &gt;=date_format(#{startTime},'%Y-%m-%d')
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &lt;= date_format(#{endTime},'%Y-%m-%d')
+			</if>
+		</when>
+		<when test="(dfSaleId !=null and dfSaleId !='') or (dxzgId !=null and dxzgId !='')">
+			(SELECT a.* 
+						from saleprocess_info a 
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						where  saleId  in(
+								select user_Id from sys_user where role_id in(select role_id from sys_role where parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')
+							)
+						GROUP BY saleCustomerId) b
+						on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+							select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+						)
+				) i
+			on a.id=i.saleCustomerId and a.delflag=0 
+			where ((i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3,5)))
+			and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12)
+			<if test="startTime !=null and startTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &gt;= date_format(#{startTime},'%Y-%m-%d')
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &lt;= date_format(#{endTime},'%Y-%m-%d')
+			</if>
+		</when>
+		<otherwise>
+				(SELECT a.* 
+							from saleprocess_info a 
+							inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+					) i
+				on a.id=i.saleCustomerId and a.delflag=0 
+				where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)
+				<if test="startTime !=null and startTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &gt;= date_format(#{startTime},'%Y-%m-%d')
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &lt;= date_format(#{endTime},'%Y-%m-%d')
+				</if>
+		</otherwise>
+		</choose> -->
+			(SELECT
+				 DISTINCT
+				   createTime,
+				  saleId,
+				<!--   STATUS,
+				  score,
+				  gjTime,
+				  content, -->
+				  saleCustomerId
+				FROM
+					saleprocess_info  ff
+				    where saleCustomerId &gt;0 and status=3 and NOT EXISTS(SELECT 1 FROM (select * from saleprocess_info where `status`=3) b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &gt;b.id)
+		      ) i
+			on a.id=i.saleCustomerId and a.delflag=0 
+			where 1=1 
+			<if test="startTime !=null and startTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &gt;= date_format(#{startTime},'%Y-%m-%d')
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(i.createTime,'%Y-%m-%d') &lt;= date_format(#{endTime},'%Y-%m-%d')
+			</if>
+		<!-- 销售精英 -->
+		<if test="saleId !=null and saleId !=''">
+			and i.saleId = #{saleId} 
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and i.saleId = #{dfSaleId}
+		</if>
+		<if test="dxzgId !=null and dxzgId !=''">
+			and i.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')) 
+		</if>
+	</select>
+	
+	
+	<select id="findgj" parameterType="pd" resultType="pd">
+		select * from
+		(SELECT count(*) zcs FROM saleprocess_info a 
+		inner join
+			sys_user c
+			on a.saleId=c.user_Id and c.isQuit=0 
+		inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+		WHERE <!-- ((a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; '') or a.type not in(0)) -->
+			a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; '' 
+		<!-- 销售精英 -->
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId = #{saleId}
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and a.saleId = #{dfSaleId}
+		</if>
+		<if test="startTime !=null and startTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>) a,
+		(SELECT count(*) dhzcs FROM saleprocess_info a
+		inner join
+			sys_user c
+			on a.saleId=c.user_Id and c.isQuit=0 
+		inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+		WHERE a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+		<!-- 销售精英 -->
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId = #{saleId}
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and a.saleId = #{dfSaleId}
+		</if>
+		<if test="startTime !=null and startTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>) b,
+		(SELECT count(1) bfl FROM visit_info WHERE delflag=0 and auditStatus=2
+		<!-- 销售精英 -->
+		<if test="saleId !=null and saleId !=''">
+			and userId = #{saleId}
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and userId = #{dfSaleId}
+		</if>
+		<if test="startTime !=null and startTime !=''">
+			and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>) c
+		,(SELECT count(*) dhyxs FROM saleprocess_info a
+		inner join
+			sys_user c
+			on a.saleId=c.user_Id and c.isQuit=0 
+		inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+		WHERE a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+		and  a.billSeconds &gt;=90
+		<!-- 销售精英 -->
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId = #{saleId}
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and a.saleId = #{dfSaleId}
+		</if>
+		<if test="startTime !=null and startTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>) d
+		limit 1
+	</select>
+	
+	
+	<select id="findReportDetail" parameterType="pd" resultType="pd">
+		SELECT
+			a.id,
+			a.type,
+			IFNULL(
+				date_format(
+					a.gjTime,
+					'%Y-%m-%d %H:%i:%s'
+				),
+				''
+			) xcgjTime,
+			IFNULL(
+				date_format(
+					a.createTime,
+					'%Y-%m-%d %H:%i:%s'
+				),
+				''
+			) gjTime,
+			a.content,
+			a. STATUS,
+			IFNULL(a.score,0) score,
+			a.recordUrl,
+			c.name saleName,
+			b.`name` saleCustomerName
+		FROM
+			saleprocess_info a
+		inner join
+			sys_user c
+			on a.saleId=c.user_Id and c.isQuit=0 
+		inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+		WHERE
+			1=1
+			<if test="type==0">
+			and ((a.type = 0 <!-- and callUuid is not null and callUuid  &lt;&gt; ''  -->and saleCustomerId is not null and saleCustomerId &lt;&gt; '') or a.type not in(0))
+			</if>
+			<if test="type==1">
+			and (a.type = 0 and callUuid is not null and callUuid  &lt;&gt; '' and saleCustomerId is not null and saleCustomerId &lt;&gt; '') 
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and a.createTime &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and a.createTime &lt;= #{endTime}
+			</if>
+			<if test="billSeconds !=null and billSeconds !=''">
+				AND billSeconds &gt;=#{billSeconds}
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and a.saleId = #{saleId}
+		</if>	
+		ORDER BY
+			a.createTime DESC
+	</select>
+	
+	<select id="findyc" parameterType="pd" resultType="pd">
+			select * from 
+			(select count(1) khs,sum(price) price from saleyc_info where 1=1 and type=0
+			<if test="saleId !=null and saleId !=''">
+				and saleId = #{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and saleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>) a,
+			(select count(1) yckhs from saleyc_info where 1=1 and type=1
+			<if test="saleId !=null and saleId !=''">
+				and saleId = #{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and saleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>) b
+	</select>
+	
+	<!-- <select id="findyc1" parameterType="pd" resultType="pd">
+			select count(1) khs from saleyc_info where 1=1 and type=1
+			<if test="saleId !=null and saleId !=''">
+				and saleId = #{saleId}
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and saleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+	</select> -->
+	
+	<insert id="saveSaleyc" parameterType="pd">
+		insert into saleyc_info(saleId,saleCustomerId,price) values(#{saleId},#{saleCustomerId},#{price})
+	</insert>
+	
+	<insert id="saveSaleyc1" parameterType="pd">
+		insert into saleyc_info(saleId,saleCustomerId,type) values(#{saleId},#{saleCustomerId},1)
+	</insert>
+	
+	<select id="findName" parameterType="pd" resultType="pd">
+		select id from saleyc_info where saleCustomerId=#{saleCustomerId} 
+	</select>
+	
+	<select id="showSaleyc" parameterType="pd" resultType="pd">
+		select a.price,b.name saleCustomerName,c.name saleName from saleyc_info a,saleCustomer_info b,sys_user c
+		where a.saleCustomerId=b.id and c.isQuit=0 and c.user_Id=a.saleId
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId=c.user_Id 
+			and a.saleId = #{saleId}
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''">
+			and b.dfSaleId=c.user_Id
+			and b.dfSaleId = #{dfSaleId}
+		</if>
+		<if test="type!=null and type !=''">
+			and a.type=#{type} 
+		</if>
+		<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>
+	</select>
+	
+	<select id="findVisitDetail" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.target,
+			a.visitman,
+			a.userId,
+			a.mobilPhone,
+			IFNULL(a.reason,'') reason,
+			IFNULL(a.evaluatSelf,'') evaluatSelf,
+			IFNULL(a.type,'') type,
+			IFNULL(a.collaborator,'') collaborator,
+			d.name collaboratorName,
+			c.name sqName,
+			e.name aduitName,
+			IFNULL(a.yjsc,'') yjsc,
+			IFNULL(a.yjts,'') yjts,
+			IFNULL(a.kssj,'') kssj,
+			IFNULL(a.ksrq,'') ksrq,
+			IFNULL(a.yjhdwsj,'') yjhdwsj,
+			IFNULL(date_format(a.yjhdwrq,'%Y-%m-%d '),'') yjhdwrq,
+			IFNULL(a.yqxg,'') yqxg,
+			IFNULL(a.sjhgssj,'') sjhgssj,
+			IFNULL(date_format(a.sjhgsrq,'%Y-%m-%d'),'') sjhgsrq,
+			a.wcqk,
+			a.wwcyy,
+			a.address,
+			IFNULL(a.auditStatus,'') auditStatus,
+			IFNULL(a.leaderShip,'') leaderShip,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			visit_info a
+		left join 	
+			sys_user c
+			on a.userId =c.user_id  and c.isQuit=0 <!-- 申请人(执行人) -->
+		left join 	
+			sys_user e
+			on a.auditerId =e.user_id  and e.isQuit=0<!-- 审核人 -->
+		left join 	
+			sys_user d
+			on a.collaborator =d.user_id  and d.isQuit=0 <!-- 协作人 -->
+		where a.delFlag = 0  and a.sqorzp=0 
+		<if test="saleId !=null and saleId !=''">
+			and a.userId = #{saleId}
+		</if>
+		<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>
+	</select>
+	
+	<select id="showRate" parameterType="pd" resultType="pd">
+		<if test="flag==0 and flag !=null and flag !=''"> <!-- 意向转化率 -->
+			select IFNULL(a.sl,0) dhsl,IFNULL(c.sl,0) yxdhsl,IFNULL(b.sl,0) yxsl,s.USER_ID saleId,s.name from 
+			sys_user s
+			LEFT JOIN
+			(
+			SELECT
+				count(*) sl,
+				a.saleId
+			FROM
+				saleprocess_info a
+				inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+			WHERE
+				a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+			<if test="startTime !=null and startTime !=''">
+				and DATE_FORMAT(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and DATE_FORMAT(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>		
+			GROUP BY
+				a.saleId
+			) a
+				on a.saleId=s.USER_ID	
+			LEFT JOIN
+			(
+			SELECT
+				count(*) sl,
+				saleId
+			FROM
+				saleprocess_info
+			WHERE
+				type = 0 and callUuid is not null and callUuid  &lt;&gt; '' and saleCustomerId is not null and saleCustomerId &lt;&gt; '' and billSeconds &gt;=90
+			<if test="startTime !=null and startTime !=''">
+				and DATE_FORMAT(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and DATE_FORMAT(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>		
+			GROUP BY
+				saleId
+			) c
+				on c.saleId=s.USER_ID	
+			left join 			
+			(
+				<choose>
+				<when test="dfSaleId !=null and dfSaleId !=''">
+					select IFNULL(a.sl,0) sl,saleId from sys_user s
+					LEFT JOIN
+								(select 	count(1) sl,
+											i.saleid saleId
+											from salecustomer_info a 
+									left join 
+											(SELECT a.* 
+													from saleprocess_info a 
+													inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+													where  saleId not in(
+															select user_Id from sys_user where role_id in(select role_id from sys_role where parent_id ='a8f76756b4dd4fbb8ca063bd76cb3fb5')
+														)
+													GROUP BY saleCustomerId) b
+													on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(
+														select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+													) -->
+											) i
+										on a.id=i.saleCustomerId and a.delflag=0 
+										where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)
+										<if test="startTime !=null and startTime !=''">
+											and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+										</if>	
+										<if test="endTime !=null and endTime !=''">
+											and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+										</if>
+								group by i.saleid) a
+					on a.saleId=s.USER_ID
+					where s.ROLE_ID='30b1487221464d369ca4c2462ccca920'
+				</when>
+				<when test="saleId !=null and saleId !=''">
+					select IFNULL(a.sl,0) sl,saleId from sys_user s
+					LEFT JOIN
+							(select 	count(1) sl,
+										a.lastSaleId saleId
+										from salecustomer_info a 
+								left join 
+										(SELECT a.* 
+												from saleprocess_info a 
+												inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+												on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(
+													select user_Id from sys_user where role_id in('30b1487221464d369ca4c2462ccca920')
+												) -->
+										) i
+									on a.id=i.saleCustomerId and a.delflag=0 
+									where i.status &gt;=3 and i.status &lt;9  and a.iskhGh=2
+									<if test="startTime !=null and startTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+									</if>	
+									<if test="endTime !=null and endTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+									</if>
+							group by a.lastSaleId) a
+						on a.saleId=s.USER_ID
+						where s.ROLE_ID='b729e9334ad64c15a4e47d88b8c2638f'
+				</when>
+				<otherwise>
+						select count(1) sl,
+									i.saleId saleId
+									from salecustomer_info a 
+								left join 
+										(SELECT a.* 
+												from saleprocess_info a 
+												inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+												where  saleId not in(
+															select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+														)
+												GROUP BY saleCustomerId) b
+												on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+										) i
+									on a.id=i.saleCustomerId and a.delflag=0 
+									where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)
+									<if test="startTime !=null and startTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+									</if>	
+									<if test="endTime !=null and endTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+									</if>
+							group by saleId
+							union all
+							select count(1) sl,
+									i.saleId saleId
+									from salecustomer_info a 
+								left join 
+										(SELECT a.* 
+												from saleprocess_info a 
+												inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+												where  saleId not in(
+															select user_Id from sys_user where role_id in('30b1487221464d369ca4c2462ccca920')
+														)
+												GROUP BY saleCustomerId) b
+												on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+										) i
+									on a.id=i.saleCustomerId and a.delflag=0 
+									where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2)
+									<if test="startTime !=null and startTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+									</if>	
+									<if test="endTime !=null and endTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+									</if>
+							group by saleId
+				</otherwise>
+				</choose>
+			) b
+				on b.saleId=s.user_Id
+				where s.isQuit=0 and s.role_id in('30b1487221464d369ca4c2462ccca920','b729e9334ad64c15a4e47d88b8c2638f')
+				<if test="saleId !=null and saleId !=''">
+					and s.role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+				</if>
+				<if test="dfSaleId !=null and dfSaleId !=''">
+					and s.role_id in('30b1487221464d369ca4c2462ccca920')
+				</if>
+				<if test="managerId ==null or managerId ==''">
+					and s.user_Id not in('6d26d8fcf8274b52b1f86f928f5de4bc')
+				</if>
+		</if>
+	
+		<if test="flag==1 and flag !=null and flag !=''"><!-- 意向成交转换率 -->
+			select IFNULL(a.sl,0) yxsl,IFNULL(b.sl,0) cjsl,IFNULL(c.sl,0) wfsl,s.USER_ID saleId,s.name from 
+			sys_user s
+			LEFT JOIN
+			(
+				<choose>
+				<!-- <when test="saleId !=null and saleId !=''">
+					select IFNULL(a.sl,0) sl,saleId from sys_user s
+					LEFT JOIN
+								(select 	count(1) sl,
+											a.lastSaleId saleId
+											from salecustomer_info a 
+									left join 
+											(SELECT a.* 
+													from saleprocess_info a 
+													inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+													on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+														select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+													)
+											) i
+										on a.id=i.saleCustomerId and a.delflag=0 
+										where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)
+										<if test="startTime !=null and startTime !=''">
+											and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+										</if>	
+										<if test="endTime !=null and endTime !=''">
+											and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+										</if>
+								group by a.lastSaleId) a
+					on a.saleId=s.USER_ID
+					where s.ROLE_ID='30b1487221464d369ca4c2462ccca920'
+				</when>
+				<when test="dfSaleId !=null and dfSaleId !=''">
+					select IFNULL(a.sl,0) sl,saleId from sys_user s
+					LEFT JOIN
+							(select 	count(1) sl,
+										a.lastSaleId saleId
+										from salecustomer_info a 
+								left join 
+										(SELECT a.* 
+												from saleprocess_info a 
+												inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+												on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+													select user_Id from sys_user where role_id in('30b1487221464d369ca4c2462ccca920')
+												)
+												
+										) i
+									on a.id=i.saleCustomerId and a.delflag=0 
+									where i.status &gt;=3 and i.status &lt;9  and a.iskhGh=2
+									<if test="startTime !=null and startTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+									</if>	
+									<if test="endTime !=null and endTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+									</if>
+							group by a.lastSaleId) a
+						on a.saleId=s.USER_ID
+						where s.ROLE_ID='b729e9334ad64c15a4e47d88b8c2638f'
+				</when> -->
+				<otherwise>
+						select count(1) sl,
+									a.lastSaleId saleId
+									from salecustomer_info a 
+								left join 
+										(SELECT a.* 
+												from saleprocess_info a 
+												inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+												on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+										) i
+									on a.id=i.saleCustomerId and a.delflag=0 
+									where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)
+									<if test="startTime !=null and startTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+									</if>	
+									<if test="endTime !=null and endTime !=''">
+										and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+									</if>
+							group by a.lastSaleId 
+				</otherwise>
+				</choose>
+			) a
+			on a.saleId=s.USER_ID
+			left join
+			(select count(1) sl,orderSaleId saleId from customer_info where delflag=0 
+			<if test="startTime !=null and startTime !=''">
+					and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+			group by orderSaleId) b
+			on a.saleId=b.saleId
+			left join
+			(select count(1) sl, userId saleId from visit_info  where delflag=0 
+			<if test="startTime !=null and startTime !=''">
+					and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+			GROUP BY userId) c
+			on b.saleId=c.saleId
+			where s.role_id in('b729e9334ad64c15a4e47d88b8c2638f') and s.isQuit=0
+			<!-- <if test="saleId !=null and saleId !=''">
+					and s.role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and s.role_id in('30b1487221464d369ca4c2462ccca920')
+			</if> -->
+			<if test="managerId ==null or managerId ==''">
+				and s.user_Id not in('6d26d8fcf8274b52b1f86f928f5de4bc')
+			</if>
+			</if>
+			
+			<if test="flag==2 and flag !=null and flag !=''">
+				select IFNULL(a.sl,0) qdl,IFNULL(b.sl,0) cjl,s.USER_ID saleId,s.name from 
+				sys_user s	
+				left join 
+				(select count(1) sl,saleId from saleYc_info where 1=1 
+				<if test="startTime !=null and startTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+				group by saleId) a
+				on a.saleId=s.USER_ID
+				left join
+				(select count(1) sl,orderSaleId saleId from customer_info where delflag=0 
+				<if test="startTime !=null and startTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+				group by orderSaleId) b
+				on a.saleId=b.saleId
+				where s.role_id in('b729e9334ad64c15a4e47d88b8c2638f') and s.isQuit=0
+				<!-- <if test="saleId !=null and saleId !=''">
+					and s.role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+				</if>
+				<if test="dfSaleId !=null and dfSaleId !=''">
+					and s.role_id in('30b1487221464d369ca4c2462ccca920')
+				</if> -->
+				<if test="managerId ==null or managerId ==''">
+				and s.user_Id not in('6d26d8fcf8274b52b1f86f928f5de4bc')
+				</if>
+			</if>
+			
+			<if test="flag==3 and flag !=null and flag !=''">
+				select IFNULL(a.price,0) mbje,IFNULL(b.price,0) wtje,s.USER_ID saleId,s.name from 
+				sys_user s	
+				left join 
+				(select sum(price) price,saleId from saleYc_info where 1=1 
+				<if test="startTime !=null and startTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+						and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+				group by saleId) a
+				on a.saleId=s.USER_ID
+				left join
+				(select sum(price) price,userId saleId from contract_info where delflag=0 
+				<if test="startTime !=null and startTime !=''">
+						and date_format(signingTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+						and date_format(signingTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+				group by userId) b
+				on a.saleId=b.saleId
+				where s.role_id in('b729e9334ad64c15a4e47d88b8c2638f') and s.isQuit=0
+				<!-- <if test="saleId !=null and saleId !=''">
+					and s.role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+				</if>
+				<if test="dfSaleId !=null and dfSaleId !=''">
+					and s.role_id in('30b1487221464d369ca4c2462ccca920')
+				</if> -->
+				<if test="managerId ==null or managerId ==''">
+					and s.user_Id not in('6d26d8fcf8274b52b1f86f928f5de4bc')
+				</if>
+			</if>
+	</select>
+	
+	
+	
+	<select id="showXsld" parameterType="pd" resultType="pd">
+			select count(1) sl, '1' status from saleCustomer_info a where iskhgh = 2 and a.delflag=0
+			<if test="saleId !=null and saleId !=''">
+				and a.lastSaleId = #{saleId} 
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.lastSaleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+			<choose>
+				<when test="saleId !=null and saleId !=''">
+				union all
+					select count(1) sl,
+					  '3' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(select user_Id from sys_user where role_Id in('30b1487221464d369ca4c2462ccca920')) -->) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where a.iskhGh =2  and i.status &gt;=4 and i.status &lt;=8  
+					and a.lastSaleId = #{saleId} 
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</when>
+				<when test="dfSaleId !=null and dfSaleId !=''">
+				union all
+					select count(1) sl,
+					    '3' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(select user_Id from sys_user where role_Id in('b729e9334ad64c15a4e47d88b8c2638f')) -->) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where a.iskhGh =2  and i.status &gt;=4 and i.status &lt;=8  
+					<!-- and a.dfSaleId = #{dfSaleId}  -->
+						and a.lastSaleId = #{dfSaleId}
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</when>
+				<otherwise>
+					union all
+					select count(1) sl,
+					    '3' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where  a.iskhGh =2  and i.status &gt;=4 and i.status &lt;=8  
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="saleId !=null and saleId !=''">
+				union all
+					select count(1) sl,
+					  '2' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(select user_Id from sys_user where role_Id in('30b1487221464d369ca4c2462ccca920')) -->) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where i.status =3  and a.iskhGh =2
+					and a.lastSaleId = #{saleId} 
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</when>
+				<when test="dfSaleId !=null and dfSaleId !=''">
+				union all
+					select count(1) sl,
+					    '2' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime <!-- and a.saleId not in(select user_Id from sys_user where role_Id in('b729e9334ad64c15a4e47d88b8c2638f')) -->) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where i.status =3 and a.iskhGh in(2,3)
+					<!-- and a.dfSaleId = #{dfSaleId}  -->
+						and a.lastSaleId = #{dfSaleId}
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</when>
+				<otherwise>
+					union all
+					select count(1) sl,
+					    '2' status
+					 from salecustomer_info a 
+				inner join 
+						(SELECT a.* from saleprocess_info a 
+							inner join(
+							select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where i.status=3 and a.iskhGh in(2,3)
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</otherwise>
+			</choose>
+			<!-- union all
+			select count(1) sl, '3' status from visit_info a where a.delflag=0 and auditStatus=2
+			<if test="saleId !=null and saleId !=''">
+				and a.userId = #{saleId} 
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.userId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if> -->
+			union all
+			select count(1) sl, '4' status from customer_info a where a.delflag=0 
+			<if test="saleId !=null and saleId !=''">
+				and a.orderSaleId = #{saleId} 
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.orderSaleId = #{dfSaleId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+	</select>
+	
+	<select id="showXszs" parameterType="pd" resultType="pd">
+		<if test="flag==0 and flag !=null and flag !=''"> <!-- 超过7天没有跟进的客户 -->
+			select
+			a.id,
+			a.name,
+			a.cjrName,
+			a.postion,
+			a.type,
+			a.email,
+			a.province,
+			a.cityName,
+			a.area,
+			a.address,
+			a.qq,
+			a.weChat,
+			a.content,
+			a.lastSaleId,
+			IFNULL(b.name,'无') lastSaleName,
+			a.isKhGh,
+			a.isaction,
+			a.linkmanLandline,
+			a.linkmanName,
+			a.linkmanMobilePhone,
+			IFNULL(date_format(a.qdTime,'%Y-%m-%d %H:%i:%s'),'') qdTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.zyTime,'%Y-%m-%d %H:%i:%s'),'') zyTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(i.gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(date_format(a.hrghTime,'%Y-%m-%d %H:%i:%s'),'') xchrghTime,			
+			IFNULL(i.status,0) gjStatus,
+			IFNULL(i.content,'') remark,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+		 	from salecustomer_info a
+		 	left join 
+				sys_user b 
+			on a.lastSaleId=b.user_id and b.isQuit=0
+			left join 
+				(SELECT
+				  DISTINCT
+				  createTime,
+				  saleId,
+				  STATUS,
+				  score,
+				  gjTime,
+				  content,
+				  saleCustomerId
+				FROM
+					saleprocess_info  ff
+				where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+		     ) i
+			on a.id=i.salecustomerId
+			where a.isKhGh=2 and date_format(DATE_ADD(curdate(), INTERVAL 3 DAY),'%Y-%m-%d') &gt;=date_format(a.hrghTime,'%Y-%m-%d') and date_format(curdate(),'%Y-%m-%d') &lt;=date_format(a.hrghTime,'%Y-%m-%d')
+			<if test="saleId !=null and saleId !=''">
+				and a.lastSaleId = #{saleId} 
+			</if>
+		</if>
+		<if test="flag==1 and flag !=null and flag !=''"> <!-- 7天内有回款的合同 -->
+			select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+				case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(i.gjStatus,'') gjStatus,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(l.time,'%Y-%m-%d'),'') jhTime,
+			IFNULL(l.money,'') jhMoney,
+			IFNULL(date_format(j.createTime,'%Y-%m-%d %H:%i:%s'),'') reportTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left join 
+			(SELECT a.* from process_info a 
+				inner join(
+				select max(createTime) createTime,orderId from process_info GROUP BY orderId) b
+				on a.orderid=b.orderid and a.createTime=b.createTime) i
+			on a.id=i.orderId
+		left join 
+			(SELECT a.* from orderreport_info a 
+				inner join(
+				select max(createTime) createTime,orderId from orderreport_info GROUP BY orderId) b
+				on a.orderid=b.orderid and a.createTime=b.createTime) j
+			on a.id=j.orderId
+		inner join
+		(
+			<!-- select sum(onceMoney) money,time,orderId from
+			(select DATE_FORMAT(case when a.type=0 then a.planTime
+							else  b.time
+						end,'%Y-%m-%d') time,a.orderId,
+						case when a.type=0 then a.onceMoney
+							else  b.money
+						end onceMoney
+						 from paymentplan_info a 
+					left join paymentsub_info b
+					on a.id=b.paymentId) a
+	group by a.time,a.orderId
+			union 
+		select sum(money) money,DATE_FORMAT(plantime,'%Y-%m-%d') time,orderId from proximopaymentplan_info
+		group by time,orderId
+		ORDER BY time desc -->
+		select time,orderId,money from 
+(select sum(onceMoney) money,time,orderId,2 flag from
+			(select DATE_FORMAT(b.time,'%Y-%m-%d') time,a.orderId,
+					b.money onceMoney
+						 from paymentplan_info a 
+					left join paymentsub_info b
+					on a.id=b.paymentId
+			where a.type=1
+) a
+	group by a.time,a.orderId
+
+	union
+
+select sum(onceMoney) money,DATE_FORMAT(a.plantime,'%Y-%m-%d') time,orderId,1 flag
+						 from paymentplan_info a 
+	where a.type=0
+	group by time,orderId)a
+GROUP BY time,orderid
+
+		) l
+		on a.id=l.orderId and date_format(DATE_ADD(curdate(), INTERVAL 7 DAY),'%Y-%m-%d') &gt;=date_format(l.time,'%Y-%m-%d')
+		and date_format(curdate(),'%Y-%m-%d') &lt;=date_format(l.time,'%Y-%m-%d')
+		where a.delFlag = 0
+		<!-- and date_format(DATE_SUB(curdate(), INTERVAL 7 DAY),'%Y-%m-%d') &lt;=date_format(h.currentTime,'%Y-%m-%d') -->
+			<if test="saleId !=null and saleId !=''">
+				and a.saleId = #{saleId} 
+			</if>
+			<if test="runnerId !=null and runnerId !=''">
+				and a.runnerId = #{runnerId} 
+			</if>
+		</if>
+		<if test="flag==2 and flag !=null and flag !=''"> 
+			select
+			a.id,
+			a.userId,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(d.debtorName,a.debtorName) debtorName,
+			IFNULL(d.custoemrName,c.name) customerName,
+			IFNULL(d.debtAmount,a.price) price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			d.cType,
+			d.discount,
+			d.susongdiscount,
+			d.fixedMoney,
+			d.lawCommissionRate,
+			d.commissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join 
+			(select
+			a.id,
+			a.contractId,
+			d.id customerId,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.debtAmount,'') debtAmount,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		where a.delflag=0 
+			) d
+			on a.id=d.contractId 
+		where a.delFlag = 0  and date_format(DATE_ADD(curdate(), INTERVAL 30 DAY),'%Y-%m-%d') &gt;=date_format(endTime,'%Y-%m-%d') and date_format(curdate(),'%Y-%m-%d') &lt;=date_format(endTime,'%Y-%m-%d')
+			<if test="saleId !=null and saleId !=''">
+				and a.userId = #{saleId} 
+			</if>
+		</if>
+	</select>
+	
+	
+	<select id="searchKeywords" parameterType="pd" resultType="pd">
+		<choose>
+				<when test="flag==0 and flag !=null and flag !=''">
+					select name,id from customer_info a where a.delflag=0 
+					<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+					and
+					(
+					a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+					or
+					exists (select 1 from linkman_info d where a.id=d.relateId and d.type=0 and (
+							d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							))
+					)
+					</if>
+					<if test="saleId!=null and saleId !=''">
+					and a.orderSaleId=#{saleId}
+					</if>
+				</when>
+				<when test="flag==1 and flag !=null and flag !=''">
+					select name,id from debtor_info a where 1=1
+					<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+					and
+					(
+					a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+					or
+					exists (select 1 from linkman_info d where a.id=d.relateId and d.type=1 and (
+							d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							))
+					)
+					</if>
+				</when>
+				<otherwise>
+					select
+						a.name,
+						a.id
+					from
+					 saleCustomer_info a 
+						left join 
+						sys_user b 
+						on a.lastSaleId=b.user_id and b.isQuit=0
+					<!-- left join 
+						sys_user c
+						on a.saleId=c.user_id and c.isQuit=0 -->
+					left join 
+						(SELECT
+							  DISTINCT
+							  createTime,
+							  saleId,
+							  STATUS,
+							  score,
+							  gjTime,
+							  content,
+							  saleCustomerId
+							FROM
+								saleprocess_info  ff
+							where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+					    ) i
+						on a.id=i.saleCustomerId	
+						where a.delFlag = 0 
+						<if test="flag==2 and flag !=null and flag !=''">
+							and a.iskhGh=2
+						</if>
+						<if test="flag==3 and flag !=null and flag !=''">
+							and a.iskhGh=0
+						</if>
+						<if test="flag==4 and flag !=null and flag !=''">
+						and a.iskhGh=3
+						</if>
+						<if test="flag==5 and flag !=null and flag !=''">
+						and a.iskhGh=4
+						</if>
+						<if test="flag==6 and flag !=null and flag !=''">
+						and a.iskhGh=1
+						</if>
+						<if test="flag==7 and flag !=null and flag !=''">
+						and a.iskhGh=5
+						</if>
+						<if test="flag==8 and flag !=null and flag !=''">
+							and a.iskhGh=6
+						</if>
+						<if test="flag==9 and flag !=null and flag !=''">
+							and a.iskhGh=7
+						</if>
+						<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+							and
+							(
+							a.wechat LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							a.email LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							a.linkmanLandline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							a.linkmanName LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							a.linkmanMobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or 
+							exists(select 1 from linkman_info d where a.id=d.relateId and d.type=3 and (
+							d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							or
+							d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+							)))
+							</if>
+				</otherwise>
+		</choose>
+	</select>
+	
+	<select id="showCustomer" parameterType="pd" resultType="pd">
+		<if test="flag==1">
+		select
+			a.id,
+			a.contractSaleId,
+			a.orderSaleId,
+			IFNULL(a.provinceName,'') provinceName,
+			IFNULL(a.cityName,'') cityName,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.companyAddress,'') companyAddress,
+			IFNULL(a.name,'') name,
+			IFNULL(b.name,'') contractSaleName,
+			IFNULL(c.name,'') orderSaleName,
+			IFNULL(a.bankAccountName,'') bankAccountName,
+			IFNULL(a.bankName,'') bankName,
+			IFNULL(a.bankNumber,'') bankNumber,
+			IFNULL(a.taxIdentificationNumber,'') taxIdentificationNumber,
+			IFNULL(a.email,'') email,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.status,'') status,
+			IFNULL(a.otherContract,'') otherContract,
+			IFNULL(a.postCode,'') postCode,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d'),'') editTime
+		from
+			customer_info a
+		<if test="dxswgwId !=null and dxswgwId !=''">
+			inner join (select sum(debtAmount) je,customerId from order_info where delflag=0 group by customerId) d
+			on a.id=d.customerId and d.je &gt;35000
+		</if>
+		left join 
+				sys_user b
+			on a.contractSaleId=b.user_id
+			left join 
+				sys_user c
+			on a.orderSaleId=c.user_id
+			where a.delFlag = 0
+		<if test="startTime !=null and startTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &gt;= date_format(#{startTime},'%Y-%m-%d')
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(a.createTime,'%Y-%m-%d') &lt;=  date_format(#{endTime},'%Y-%m-%d')
+		</if>
+		<if test="saleId !=null and saleId !=''">
+			and a.orderSaleId = #{saleId} 
+		</if>
+		<if test="dxswgwId !=null and dxswgwId !=''">
+			and a.orderSaleId = #{dxswgwId} 
+		</if>
+		</if>
+		<if test="flag==2">
+		select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			IFNULL(h.totalMoney,0) totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			d.cityName,
+			d.provinceName,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d'),'') createTime,
+			IFNULL(date_format(k.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(k.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left JOIN
+			contract_info k
+			on k.id=a.contractId
+		where a.delFlag = 0 
+		<if test="marks !=null and marks !=''">
+			and a.debtAmount &gt;35000
+		</if>
+		<if test="type != null and type != ''">
+			and a.type = #{type}
+		</if>
+		<if test="status1 != null and status1 != ''">
+			and a.status =#{status1}
+		</if>
+		<if test="isFiled != null and isFiled != ''">
+			and a.isFiled =#{isFiled}
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)
+		</if>
+	<!-- 	<if test="startTime != null and startTime != ''">注册时间检索
+			and k.signingTime &gt;= #{startTime}
+		</if>
+		<if test="endTime != null and endTime != ''">注册时间检索
+			and k.signingTime &lt;= #{endTime}
+		</if> -->
+		<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{startTime}
+		</if>
+		<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{endTime}
+		</if>
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId = #{saleId} 
+		</if>
+		<if test="dxswgwId !=null and dxswgwId !=''">
+			and a.saleId = #{dxswgwId} and a.debtAmount &gt;35000
+		</if>
+		<if test="customerId !=null and customerId !=''">
+			and d.id = #{customerId} 
+		</if>
+		order by a.id desc
+		</if>
+		
+		<if test="flag==3">
+			select
+				a.id,
+				a.customerId,
+				c.name runnerName,
+				IFNULL(d.name,'') custoemrName,
+				IFNULL(b.name,'') saleName,
+				IFNULL(e.name,'') debtorName,	
+				IFNULL(a.debtAmount,'') debtAmount,
+				<!-- IFNULL(a.fixedMoney,'') fixedMoney, -->
+				IFNULL(a.cType,'') cType,
+				f.currentMoney money,
+				case when a.cType=0 then (
+				case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+				 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+				 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+					 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+						   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+				 end) else a.fixedMoney end commissionaMount,
+				 case when a.cType=0 then(
+				case when a.status=0 
+					 then (case when a.commissionRate is null then ''
+					 when a.commissionRate = '' then '' 
+							else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+				when a.status=3 or a.status=4 then (case when a.lawCommissionRate is null then ''
+					 when a.lawCommissionRate = '' then '' 
+					 else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end) 
+				else (case when a.lawCommissionRate is null then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+					 	   when a.lawCommissionRate = '' then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+						   else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end)
+					 end) else '-' end commissionRate,
+				IFNULL(date_format(f.currentTime,'%Y-%m-%d'),'') planTime 
+			from
+				order_info a 
+				inner join 
+				paymentdetail_info f
+			on a.id =f.orderId 
+			left join 
+				sys_user b
+				on a.saleId=b.USER_ID
+			left join 	
+				sys_user c
+				on a.runnerId =c.USER_ID
+			left join 	
+				customer_info d
+				on a.customerId =d.id
+			left join
+			debtor_info e
+				on a.debtorId=e.id
+			where a.delflag=0 and f.delflag=0 
+			<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+				and f.currentTime &gt;= #{startTime}
+			</if>
+			<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+				and f.currentTime &lt;= #{endTime}
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and a.saleId = #{saleId} 
+			</if>
+			<if test="customerId !=null and customerId !=''">
+				and a.customerId = #{customerId} 
+			</if>
+			order by a.id desc
+			</if>
+	</select>
+	
+	<select id="findDebtorDetail" parameterType="pd" resultMap="maps">
+		select
+			e.id debtorId,
+			a.id orderId,
+			c.name runnerName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(e.address,'') debtorAddress,
+			IFNULL(e.postCode,'') debtorPostcode,
+			IFNULL(e.fax,'') debtorFax,
+			IFNULL(e.mobilePhone,'') debtorMobilePhone,
+			IFNULL(e.otherContract,'') debtorOtherContract,
+			IFNULL(e.status,'') debtorStatus,
+			IFNULL(e.provinceName,'') provinceName,
+			IFNULL(e.cityName,'') cityName 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		inner join
+			debtor_info e
+			on a.debtorId=e.id
+		where e.id=#{id}
+	</select>
+	
+	<resultMap type="pd" id="maps">
+		<id property="orderId" column="orderId"/>
+		<result property="debtorId" column="debtorId"/>
+		<collection property="linkMan" column="{id1=debtorId,id2=orderId}"  select="findLinkMan1"></collection>
+	</resultMap>
+	
+	<select id="findLinkMan1" parameterType="HashMap"  resultType="pd">
+		select IFNULL(a.name,'') name,IFNULL(a.mobilePhone,'') mobilePhone,IFNULL(a.landline,'') landline,IFNULL(a.postion,'') postion,a.email,a.fax,a.remark from linkman_info a,order_linkman_info b where b.type in(0,1) and a.relateId=#{id1} and a.id=b.linkmanId and a.delflag=0 and b.orderId=#{id2}
+	</select>
+	
+	
+	
+	
+	<select id="findSalePhoneReport" parameterType="pd" resultType="pd">
+	SELECT
+		IFNULL(a.zcs,0) dhl,
+		b.yxkhs,
+		c.user_Id saleId,
+		c.name
+		FROM
+			sys_user c
+			inner join 
+			sys_role d
+			on c.role_id =d.role_id 
+			left join(
+					SELECT
+					count(*) zcs,
+					a.saleId
+				FROM
+					saleprocess_info a
+					inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+				WHERE
+					a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+				<if test="startTime !=null and startTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>		
+				GROUP BY
+					a.saleId
+			) a
+			on c.user_Id=a.saleId
+			left join (select count(1) yxkhs,i.saleId saleId from saleCustomer_info a 
+				inner join 
+				<!-- (SELECT a.* 
+							from saleprocess_info a 
+							inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+							where  saleId  in(
+							select user_Id from sys_user where role_id in(select role_id from sys_role where parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')
+							)
+							GROUP BY saleCustomerId) b
+							on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+								select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+							)
+					) i
+				on a.id=i.saleCustomerId and a.delflag=0 
+				where i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3,5) 
+				and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12)-->
+				(SELECT
+				  DISTINCT
+				  createTime,
+				  saleId,
+				 <!--  STATUS,
+				  score,
+				  gjTime,
+				  content, -->
+				  saleCustomerId
+				FROM
+					saleprocess_info  ff
+				    where saleCustomerId &gt;0 and status=3 and NOT EXISTS(SELECT 1 FROM (select * from saleprocess_info where `status`=3) b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &gt;b.id)
+		      	) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where 1=1 
+				<if test="startTime !=null and startTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+				group by i.saleId
+			) b
+			on c.user_Id=b.saleId
+			where d.parent_id='a5207f2a9a2b46f49ff52ff5c9669341' and c.isQuit=0 
+			<if test="saleId !=null and saleId !=''">
+				and c.user_Id = #{saleId} 
+			</if>
+			<if test="flag==0">
+				order by dhl desc
+			</if>
+			<if test="flag==1">
+				order by b.yxkhs desc
+			</if>
+	</select>
+	
+	
+	<select id="showxsldDetail" parameterType="pd" resultType="pd">
+		<if test="flag==1 or flag==2 ">
+		select
+			a.id,
+			a.name,
+			a.cjrName,
+			<!-- a.firstMan linkmanName, -->
+			a.postion,
+			a.type,
+			<!-- a.landline,
+			a.mobilePhone, -->
+			a.email,
+			a.province,
+			a.cityName,
+			a.area,
+			a.address,
+			<!-- a.status, -->
+			a.qq,
+			a.weChat,
+			<!-- a.customerresource,
+			a.ownerindustry,
+			a.money,
+			IFNULL(date_format(a.xcgetTime,'%Y-%m-%d %H:%i:%s'),'') xcgetTime, -->
+			a.content,
+			a.lastSaleId,
+			IFNULL(b.name,'无') lastSaleName,
+			<!-- c.name saleName, -->
+			a.isKhGh,
+			a.isaction,
+			a.linkmanLandline,
+			a.linkmanName,
+			a.linkmanMobilePhone,
+			IFNULL(date_format(a.qdTime,'%Y-%m-%d %H:%i:%s'),'') qdTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.zyTime,'%Y-%m-%d %H:%i:%s'),'') zyTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(i.gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(date_format(a.hrghTime,'%Y-%m-%d %H:%i:%s'),'') xchrghTime,			
+			IFNULL(i.status,0) gjStatus,
+			IFNULL(i.content,'') remark,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+		from
+		 saleCustomer_info a 
+			left join 
+			sys_user b 
+			on a.lastSaleId=b.user_id and b.isQuit=0
+		<!-- left join 
+			sys_user c
+			on a.saleId=c.user_id and c.isQuit=0 -->
+		left join 
+			(SELECT a.* from saleprocess_info a 
+				inner join(
+				select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+				on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime) i
+			on a.id=i.saleCustomerId	
+			where 1=1  and a.delflag=0
+				<if test="flag==1">
+				and a.iskhGh in(2,3)  and <!-- i.status &gt;=3 and i.status &lt;9   -->i.status=3
+				</if>
+				<if test="flag==2">
+				and a.iskhGh =2  and i.status &gt;=4 and i.status &lt;=8  
+				</if>
+			<if test="userId !=null and userId !=''">
+				and a.lastSaleId = #{userId} 
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and a.lastSaleId = #{saleId} 
+			</if>
+			<if test="dfSaleId !=null and dfSaleId !=''">
+				and a.lastSaleId = #{dfSaleId}
+			</if>
+		</if>
+	</select>
+	
+	
+	<select id="showSwgwXstj" parameterType="pd" resultType="pd">
+		
+		SELECT
+			a.user_id userId,
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			IFNULL(c.sl,0) khsl,
+			IFNULL(d.sl,0) ddsl,
+			IFNULL(e.je,0) ddzje,
+			IFNULL(h.zje,0) dkje
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+				on a.role_id =b.role_id	 and a.isQuit=0
+			left join
+				(select COUNT(*) sl,orderSaleId from customer_info where delFlag=0 
+				<if test="startTime !=null and startTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+				GROUP BY orderSaleId) c
+				on c.orderSaleId=a.user_Id
+			left join
+				(select COUNT(*) sl,saleId from order_info where delFlag=0 
+				<if test="startTime !=null and startTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+				GROUP BY saleId) d
+				on d.saleId=a.user_id 
+			left join
+				(select sum(debtAmount) je,saleId from order_info where delflag=0 
+				<if test="startTime !=null and startTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+				group by saleId) e
+							on e.saleId=a.user_id 
+			left join
+								(SELECT sum(commissionaMount) zje,a.saleId from
+				(select
+								
+								case when a.cType=0 then (
+								case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+								 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+								 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+									 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+										   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+								 end) else a.fixedMoney end commissionaMount,
+								a.saleId
+							from
+								order_info a 
+								inner join 
+								paymentdetail_info f
+							on a.id =f.orderId 
+							where a.delflag=0 and f.delflag=0
+				<if test="startTime !=null and startTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+							) a
+				group by a.saleId) h
+				on h.saleId=a.user_id				
+			where b.parent_Id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c')
+	</select>
+	
+	
+	
+	
+	
+	<select id="showSwgwYjmb" parameterType="pd" resultType="pd">
+	<if test="type==0">
+	SELECT
+			a.user_id userId,
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			round(IFNULL(h.zje,0),2) dkje
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+				on a.role_id =b.role_id	 and a.isQuit=0
+			left join
+								(SELECT sum(commissionaMount) zje,a.saleId from
+				(select
+								
+								case when a.cType=0 then (
+								case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+								 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+								 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+									 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+										   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+								 end) else a.fixedMoney end commissionaMount,
+								a.saleId
+							from
+								order_info a 
+								inner join 
+								paymentdetail_info f
+							on a.id =f.orderId 
+							where a.delflag=0 and f.delflag=0
+				<if test="startTime !=null and startTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+							) a
+				group by a.saleId) h
+				on h.saleId=a.user_id				
+			where b.parent_Id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c')
+			<if test="saleId !=null and saleId !=''">
+				and a.user_Id=#{saleId}
+			</if>
+			</if>
+			<if test="type==1"> 
+			SELECT
+			IFNULL(count(c.id),0) dkje,
+			a.user_id userId,
+			 a.name
+			FROM
+				sys_user a
+			INNER JOIN sys_role b ON a.role_id = b.role_id
+			AND a.isQuit = 0
+			LEFT JOIN contract_info c ON c.userId = a.user_Id and c.delflag=0 and c.fszss=0
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.signingTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.signingTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			WHERE
+				b.parent_Id = 'a8f76756b4dd4fbb8ca063bd76cb3fb5'
+			AND b.role_id NOT IN (
+				'fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c'
+			)
+			<if test="saleId !=null and saleId !=''">
+				and a.user_Id=#{saleId}
+			</if>
+			GROUP BY
+				a.user_id
+			</if>
+			<if test="type==2">
+			SELECT
+			IFNULL(sum(c.debtAmount),0) dkje,
+			a.user_id userId,
+			  a.name
+			FROM
+				sys_user a
+			INNER JOIN sys_role b ON a.role_id = b.role_id
+			AND a.isQuit = 0
+			LEFT JOIN order_info c ON c.saleId = a.user_Id and c.delflag=0
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			WHERE
+				b.parent_Id = 'a8f76756b4dd4fbb8ca063bd76cb3fb5'
+			AND b.role_id NOT IN (
+				'fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c'
+			)
+			<if test="saleId !=null and saleId !=''">
+				and a.user_Id=#{saleId}
+			</if>
+			GROUP BY
+				a.user_id
+			</if>
+			<if test="type==3">
+			SELECT
+			IFNULL(count(c.id),0) dkje,
+			a.user_id userId,
+			  a.name
+			FROM
+				sys_user a
+			INNER JOIN sys_role b ON a.role_id = b.role_id
+			AND a.isQuit = 0
+			LEFT JOIN 
+			<choose>
+				<when test="mark==1">
+					(select * from ddVisit_info group by  name,place,date_format(time,'%Y-%m-%d')) c
+				</when>
+				<otherwise>
+					ddVisit_info c
+				</otherwise>
+			</choose> ON c.name = a.name 
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			WHERE
+				b.parent_Id = 'a8f76756b4dd4fbb8ca063bd76cb3fb5'
+			AND b.role_id NOT IN (
+				'fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c'
+			)
+			<if test="saleId !=null and saleId !=''">
+				and a.user_Id=#{saleId}
+			</if>
+			GROUP BY
+				a.user_id
+			</if>
+	</select>
+	
+	
+	<select id="showYzsjdk" parameterType="pd" resultType="pd">
+		SELECT
+			IFNULL(sum(c.commissionaMount),0) je,c.`NAME`,c.User_Id userId
+		FROM
+			(
+				SELECT
+					CASE
+				WHEN a.cType = 0 THEN
+					(
+						CASE
+						WHEN a. STATUS = 0 THEN
+							f.currentMoney * a.commissionRate * (
+								CASE
+								WHEN a.discount IS NULL
+								OR a.discount = '' THEN
+									'100'
+								ELSE
+									a.discount
+								END
+							) / 10000
+						WHEN a. STATUS = 3
+						OR a. STATUS = 4 THEN
+							f.currentMoney * a.lawCommissionRate * (
+								CASE
+								WHEN a.susongdiscount IS NULL
+								OR a.susongdiscount = '' THEN
+									'100'
+								ELSE
+									a.susongdiscount
+								END
+							) / 10000
+						ELSE
+							f.currentMoney * (
+								CASE
+								WHEN a.lawCommissionRate IS NULL THEN
+									a.commissionRate * (
+										CASE
+										WHEN a.discount IS NULL
+										OR a.discount = '' THEN
+											'100'
+										ELSE
+											a.discount
+										END
+									)
+								WHEN a.lawCommissionRate = '' THEN
+									a.commissionRate * (
+										CASE
+										WHEN a.discount IS NULL
+										OR a.discount = '' THEN
+											'100'
+										ELSE
+											a.discount
+										END
+									)
+								ELSE
+									a.lawCommissionRate * (
+										CASE
+										WHEN a.susongdiscount IS NULL
+										OR a.susongdiscount = '' THEN
+											'100'
+										ELSE
+											a.susongdiscount
+										END
+									)
+								END
+							) / 10000
+						END
+					)
+				ELSE
+					a.fixedMoney
+				END commissionaMount,
+				c.USER_ID,
+				c.`NAME`
+			FROM
+				order_info a
+			INNER JOIN paymentdetail_info f ON a.id = f.orderId and f.delFlag=0 and a.delflag = 0 
+			<if test="startTime!=null and startTime!=''">
+				AND date_format(f.currentTime, '%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>
+			<if test="endTime !=null and endTime!=''">
+				AND date_format(f.currentTime, '%Y-%m-%d %H:%i:%s') &lt;= #{endTime} 
+			</if>
+			
+			RIGHT JOIN sys_user c ON a.runnerId = c.USER_ID
+			INNER JOIN sys_role d
+						on d.role_id =c.role_id	 and c.isQuit=0
+			WHERE
+			d.parent_Id='c068a63a15f741d883ae13463be57954'
+			) c
+		GROUP BY
+			USER_ID
+	</select>
+	
+	
+	<select id="showDhlAndYxDhl" parameterType="pd" resultType="pd">
+		select a.createTime time,IFNULL(a.zcs,0) dhl,IFNULL(b.zcs,0) yxdhl from
+					(SELECT
+					IFNULL(count(*),0) zcs,
+					<if test="flag==0">
+						date_format(a.createTime,'%Y-%m-%d') createTime
+					</if>
+					<if test="flag==1">
+						date_format(a.createTime,'%Y-%m') createTime
+					</if>
+				FROM
+					saleprocess_info a
+					inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+					INNER JOIN sys_user c ON a.saleId = c.user_Id
+					AND c.isQuit = 0
+				WHERE
+					a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt;'' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+					<if test="dfSaleId !=null and dfSaleId !=''">
+						and a.saleId=#{dfSaleId}
+					</if>
+					<if test="saleId !=null and saleId !=''">
+						and a.saleId=#{saleId}
+					</if>
+					<if test="dxzgId !=null and dxzgId !=''">
+						and a.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341'))
+					</if>
+					<if test="startTime !=null and startTime !=''">
+							and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+							and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				GROUP BY
+				<if test="flag==0">
+						date_format(a.createTime,'%Y-%m-%d')
+				</if>
+				<if test="flag==1">
+					date_format(a.createTime,'%Y-%m')
+				</if>
+			)  a
+				left join
+			(SELECT
+						IFNULL(count(*),0) zcs,
+							<if test="flag==0">
+								date_format(a.createTime,'%Y-%m-%d') createTime
+							</if>
+							<if test="flag==1">
+								date_format(a.createTime,'%Y-%m') createTime
+							</if>
+					FROM
+						saleprocess_info a
+						inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+						INNER JOIN sys_user c ON a.saleId = c.user_Id
+						AND c.isQuit = 0
+					WHERE
+						a.type = 0 and a.callUuid is not null and a.callUuid &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+					and  a.billSeconds &gt;=90
+					<if test="startTime !=null and startTime !=''">
+						and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+							and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+					<if test="dfSaleId !=null and dfSaleId !=''">
+						and a.saleId=#{dfSaleId}
+					</if>
+					<if test="saleId !=null and saleId !=''">
+						and a.saleId=#{saleId}
+					</if>
+					<if test="dxzgId !=null and dxzgId !=''">
+						and a.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341'))
+					</if>
+					GROUP BY
+					<if test="flag==0">
+						date_format(a.createTime,'%Y-%m-%d') 
+					</if>
+					<if test="flag==1">
+						date_format(a.createTime,'%Y-%m')
+					</if>
+				
+				)b
+			on a.createTime=b.createTime
+			where 1=1
+			
+	</select>
+	
+	
+	
+	<select id="showYxkhs" parameterType="pd" resultType="pd">
+		select count(1) yxkhs,
+			<if test="flag==0">
+				date_format(i.createTime,'%Y-%m-%d') time
+			</if>
+			<if test="flag==1">
+				date_format(i.createTime,'%Y-%m') time
+			</if> from saleCustomer_info a 
+		inner join 
+		<!-- <choose>
+			<when test="(dfSaleId !=null and dfSaleId !='') or (dxzgId !=null and dxzgId !='')">
+					(SELECT a.* 
+								from saleprocess_info a 
+								inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+								where  saleId  in(
+								select user_Id from sys_user where role_id in(select role_id from sys_role where parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')
+								)
+								GROUP BY saleCustomerId) b
+								on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime and a.saleId not in(
+									select user_Id from sys_user where role_id in('b729e9334ad64c15a4e47d88b8c2638f')
+								)
+						) i
+					on a.id=i.saleCustomerId and a.delflag=0  
+					<if test="dfSaleId !=null and dfSaleId !=''">
+					and i.saleId=#{dfSaleId}
+					</if>
+					<if test="dxzgId !=null and dxzgId !=''">
+					and i.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')) 
+					</if>
+					where ((i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3,5)))
+						and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12)
+					<if test="startTime !=null and startTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+			</when>
+			<when test="saleId !=null and saleId !=''">
+					(SELECT a.* 
+								from saleprocess_info a 
+								inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+								GROUP BY saleCustomerId) b
+								on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+						) i
+					on a.id=i.saleCustomerId and a.delflag=0  and i.saleId=#{saleId}
+					where i.status &gt;=3 and i.status &lt;9  and a.iskhgh =2 
+					<if test="startTime !=null and startTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+			</when>
+			<otherwise>
+			(SELECT a.* 
+								from saleprocess_info a 
+								inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info GROUP BY saleCustomerId) b
+								on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+						) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where ((i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3)))
+					<if test="startTime !=null and startTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				</otherwise>
+		</choose> -->
+		(SELECT
+				  DISTINCT
+				  createTime,
+				  saleId,
+				  <!--STATUS,
+				  score,
+				  gjTime,
+				  content, -->
+				  saleCustomerId
+				FROM
+					saleprocess_info  ff
+				    where saleCustomerId &gt;0 and status=3 and NOT EXISTS(SELECT 1 FROM (select * from saleprocess_info where `status`=3) b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &gt;b.id)
+		      ) i
+			on a.id=i.saleCustomerId and a.delflag=0 
+			where 1=1
+			  	<if test="dfSaleId !=null and dfSaleId !=''">
+				and i.saleId=#{dfSaleId}
+				</if>
+				<if test="dxzgId !=null and dxzgId !=''">
+				and i.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')) 
+				</if>
+				<if test="saleId !=null and saleId !=''">
+				and i.saleId=#{saleId}
+				</if>
+				<if test="startTime !=null and startTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>
+			group by 	
+			<if test="flag==0">
+				date_format(i.createTime,'%Y-%m-%d') 
+			</if>
+			<if test="flag==1">
+				date_format(i.createTime,'%Y-%m')
+			</if>
+	</select>
+	
+	<select id="showHt" parameterType="pd" resultType="pd">
+		SELECT
+			count(*) qdl,
+			<if test="flag==0">
+				date_format(signingTime,'%Y-%m-%d') time
+			</if>
+			<if test="flag==1">
+				date_format(signingTime,'%Y-%m') time
+			</if>
+		FROM
+			contract_info
+		WHERE
+			delflag = 0 and fszss=0
+			<if test="startTime !=null and startTime !=''">
+					and date_format(signingTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+					and date_format(signingTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and userId=#{saleId} 
+			</if>		
+		GROUP BY
+		<if test="flag==0">
+			date_format(signingTime, '%Y-%m-%d')
+		</if>
+		<if test="flag==1">
+			date_format(signingTime, '%Y-%m')
+		</if>
+	</select>
+	
+	
+	<select id="showBfl" parameterType="pd" resultType="pd">
+		SELECT
+			count(a.name) bfl,
+			<if test="flag==0">
+				date_format(a.time,'%Y-%m-%d') time
+			</if>
+			<if test="flag==1">
+				date_format(a.time,'%Y-%m') time
+			</if>
+		FROM
+			(select * from ddVisit_info group by  name,place,date_format(time,'%Y-%m-%d')) a
+		WHERE
+			1=1
+			<if test="startTime !=null and startTime !=''">
+					and date_format(a.time,'%Y-%m-%d') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+					and date_format(a.time,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and a.name in (select name from sys_user where user_id=#{saleId})
+			</if>	
+		GROUP BY
+		<if test="flag==0">
+			date_format(a.time, '%Y-%m-%d')
+		</if>
+		<if test="flag==1">
+			date_format(a.time, '%Y-%m')
+		</if>
+		order by time desc
+	</select>
+	
+	
+	<select id="findDhlAndYxkhsBySaleId" parameterType="pd" resultType="pd">
+	<choose>
+	<when test="type ==2">
+			select * from(
+		SELECT
+			a.year,
+			b.monthOrjd time,
+			case when b.targetDetail is null or b.targetDetail='' then 0
+					else b.targetDetail end targetDetail,
+			b.roleId,
+			b.userId saleId
+		FROM
+			yj_info a,
+			yj_info b
+		WHERE
+			a.type = #{type}
+		AND a.parentId = 0
+		AND b.parentId = a.id) a
+		where a.saleId=#{saleId}
+			<if test="time !=null and time !=''">
+					and a.time = #{time}
+			</if>
+			<if test="times !=null and times !=''">
+					<if test="times==1">
+						and a.time in (1)
+					</if>
+					<if test="times==2">
+						and a.time in (1,2)
+						<if test="remark1 !=null and remark1 !=''">
+							and a.time not in(1)
+						</if>
+					</if>
+					<if test="times==3">
+						and a.time in (1,2,3)
+						<if test="remark1 !=null and remark1 !=''">
+							and a.time not in(1)
+						</if>
+						<if test="remark2 !=null and remark2 !=''">
+							and a.time not in(1,2)
+						</if>
+					</if>
+					<if test="times==4">
+						and a.time in (1,2,3,4)
+						<if test="remark1 !=null and remark1 !=''">
+							and a.time not in(1)
+						</if>
+						<if test="remark2 !=null and remark2 !=''">
+							and a.time not in(1,2)
+						</if>
+						<if test="remark3 !=null and remark3 !=''">
+							and a.time not in(1,2,3)
+						</if>
+					</if>
+			</if>
+			<if test="year !=null and year !=''">
+					and a.year = #{year}
+			</if>
+			<if test="roleId !=null and roleId !=''">
+					and a.roleId = #{roleId}
+			</if>
+		</when>	
+		
+		<when test="type ==7">
+			select * from(
+		SELECT
+			a.year,
+			b.zbA,
+			b.zbB,
+			b.bfzb
+		FROM
+			yj_info a,
+			yj_info b
+		WHERE
+			a.type = #{type}
+		AND a.parentId = 0
+		AND b.parentId = a.id) a
+		where 1=1
+			<if test="year !=null and year !=''">
+					and a.year = #{year}
+			</if>
+		</when>	
+		
+		<otherwise>
+		select * from(
+		SELECT
+			case when b.monthOrjd=1 or b.monthOrjd=2 or b.monthOrjd=3 
+			then
+			CONCAT(
+				a.year+1,
+				concat('-', LPAD(b.monthOrjd, 2, 0))
+			) 
+			else
+			CONCAT(
+				a.year,
+				concat('-', LPAD(b.monthOrjd, 2, 0))
+			)  end time,
+			case when b.targetDetail is null or b.targetDetail='' then 0
+					else b.targetDetail end targetDetail,
+			b.roleId,
+			b.userId saleId
+		FROM
+			yj_info a,
+			yj_info b
+		WHERE
+			a.type = #{type}
+		AND a.parentId = 0
+		AND b.parentId = a.id) a
+		where a.saleId=#{saleId}
+			<if test="startTime !=null and startTime !=''">
+					and a.time &gt;=  date_format(#{startTime},'%Y-%m')
+			</if>	
+			<if test="startTime1 !=null and startTime1 !=''">
+					and a.time &gt; date_format(#{startTime1},'%Y-%m')
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+					and a.time &lt;=  date_format(#{endTime},'%Y-%m')
+			</if>
+			<if test="roleId !=null and roleId !=''">
+					and a.roleId = #{roleId}
+			</if>
+		</otherwise>
+		</choose>
+	</select>
+	
+	
+	<select id="findRoles" parameterType="pd" resultType="pd">
+			select * from swgwBg_info a where 1=1 
+			<if test="startTime !=null and startTime !=''">
+					and a.time &gt;=  date_format(#{startTime},'%Y-%m')
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+					and a.time &lt;=  date_format(#{endTime},'%Y-%m')
+			</if>
+			<if test="saleId !=null and saleId !=''">
+					and a.userId = #{saleId} 
+			</if>
+			order by a.time
+	</select>
+	
+	
+	
+	
+	<select id="findSalePhoneReport1" parameterType="pd" resultType="pd">
+				<if test="flag==1">
+				SELECT
+					count(*) zcs,
+					date_format(a.createTime,'%Y-%m') time
+				FROM
+					saleprocess_info a
+					inner JOIN salecustomer_info b ON a.saleCustomerId = b.id
+				WHERE
+					a.type = 0 and a.callUuid is not null and a.callUuid  &lt;&gt; '' and a.saleCustomerId is not null and a.saleCustomerId &lt;&gt; ''
+				<if test="startTime !=null and startTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+				</if>	
+				<if test="saleId !=null and saleId !=''">
+					and a.saleId = #{saleId} 
+				</if>	
+				GROUP BY
+					date_format(a.createTime,'%Y-%m')
+			</if>
+			
+			<if test="flag==2">
+				select 
+					count(1) yxkhs,date_format(i.createTime,'%Y-%m') time from saleCustomer_info a 
+					inner join 
+				<!-- 	(SELECT a.* 
+								from saleprocess_info a 
+								inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+								where  saleId  in(
+								select user_Id from sys_user where role_id in(select role_id from sys_role where parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')
+								)
+								GROUP BY saleCustomerId) b
+								on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime 
+						) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where ((i.status &gt;=3 and i.status &lt;9  and a.iskhgh in(2,3,5))) and i.saleId =#{saleId}
+					and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12) -->
+					(SELECT
+					  DISTINCT
+					  createTime,
+					  saleId,
+					 <!--  STATUS,
+					  score,
+					  gjTime,
+					  content, -->
+					  saleCustomerId
+					FROM
+						saleprocess_info  ff
+					    where saleCustomerId &gt;0 and status=3 and NOT EXISTS(SELECT 1 FROM (select * from saleprocess_info where `status`=3) b WHERE   ff.saleCustomerId = b.saleCustomerId AND ff.id &gt;b.id)
+			      ) i
+					on a.id=i.saleCustomerId and a.delflag=0 
+					where 1=1 and i.saleId =#{saleId}
+					<if test="startTime !=null and startTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+					</if>
+				group by date_format(i.createTime,'%Y-%m')
+			</if>
+	</select>
+	
+	
+	
+	<select id="showSwgwYjmb1" parameterType="pd" resultType="pd">
+	<if test="type==0">
+			SELECT  round(sum(a.commissionaMount),2) dkje,a.time from(
+						select
+								case 
+									when date_format(f.currentTime,'%m') in('04','05','06') then '1'
+									when date_format(f.currentTime,'%m') in('07','08','09') then '2'
+									when date_format(f.currentTime,'%m') in('10','11','12') then '3'
+									when date_format(f.currentTime,'%m') in('01','02','03') then '4'
+									else '0' end time,
+								case when a.cType=0 then (
+								case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+								 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+								 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+									 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+										   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+								 end) else a.fixedMoney end commissionaMount,
+								a.saleId
+							from
+								order_info a 
+								inner join 
+								paymentdetail_info f
+							on a.id =f.orderId 
+							where a.delflag=0 and f.delflag=0
+				<if test="startTime !=null and startTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>
+				<if test="endTime !=null and endTime !=''">
+					and date_format(f.currentTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+					and a.saleId=#{saleId}) a
+				GROUP BY a.time
+			</if>
+			<if test="type==1"> 
+			SELECT
+				IFNULL(count(c.id),0) htsl,
+				date_format(c.signingTime,'%Y-%m') time
+			FROM
+				contract_info c
+			WHERE
+				c.userId=#{saleId} and c.delflag=0 and c.fszss=0
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.signingTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.signingTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			GROUP BY
+				date_format(c.signingTime,'%Y-%m')
+			</if>
+			<if test="type==2">
+			SELECT
+			IFNULL(sum(c.debtAmount),0) ddje,
+			  date_format(c.createTime,'%Y-%m') time
+			FROM
+				order_info c 
+			where c.delflag=0
+				and c.saleId=#{saleId}
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			GROUP BY
+				date_format(c.createTime,'%Y-%m')
+			</if>
+			
+			<if test="type==3">
+			select * from(
+			SELECT
+			IFNULL(count(c.name),0) bfl,
+			date_format(c.time,'%Y-%m') time,
+			a.USER_ID
+			FROM
+				sys_user a
+			inner JOIN 
+				(select * from ddVisit_info group by  name,place,date_format(time,'%Y-%m-%d'))  c ON c.name = a.name  AND a.isQuit = 0
+			<if test="startTime !=null and startTime !=''">
+				and date_format(c.time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(c.time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			GROUP BY a.USER_ID,date_format(c.time, '%Y-%m')
+			) a
+			WHERE
+				a.user_Id=#{saleId}
+			</if>
+	</select>
+	
+	<select id="showYzsjdk1" parameterType="pd" resultType="pd">
+				SELECT
+					sum(CASE
+				WHEN a.cType = 0 THEN
+					(
+						CASE
+						WHEN a. STATUS = 0 THEN
+							f.currentMoney * a.commissionRate * (
+								CASE
+								WHEN a.discount IS NULL
+								OR a.discount = '' THEN
+									'100'
+								ELSE
+									a.discount
+								END
+							) / 10000
+						WHEN a. STATUS = 3
+						OR a. STATUS = 4 THEN
+							f.currentMoney * a.lawCommissionRate * (
+								CASE
+								WHEN a.susongdiscount IS NULL
+								OR a.susongdiscount = '' THEN
+									'100'
+								ELSE
+									a.susongdiscount
+								END
+							) / 10000
+						ELSE
+							f.currentMoney * (
+								CASE
+								WHEN a.lawCommissionRate IS NULL THEN
+									a.commissionRate * (
+										CASE
+										WHEN a.discount IS NULL
+										OR a.discount = '' THEN
+											'100'
+										ELSE
+											a.discount
+										END
+									)
+								WHEN a.lawCommissionRate = '' THEN
+									a.commissionRate * (
+										CASE
+										WHEN a.discount IS NULL
+										OR a.discount = '' THEN
+											'100'
+										ELSE
+											a.discount
+										END
+									)
+								ELSE
+									a.lawCommissionRate * (
+										CASE
+										WHEN a.susongdiscount IS NULL
+										OR a.susongdiscount = '' THEN
+											'100'
+										ELSE
+											a.susongdiscount
+										END
+									)
+								END
+							) / 10000
+						END
+					)
+				ELSE
+					a.fixedMoney
+				END) dkje,
+				date_format(f.currentTime, '%Y-%m') time
+			FROM
+				order_info a
+			INNER JOIN paymentdetail_info f ON a.id = f.orderId and f.delFlag=0 and a.delflag = 0 
+			INNER JOIN sys_user c ON a.runnerId = c.USER_ID
+			INNER JOIN sys_role d
+						on d.role_id =c.role_id	 and c.isQuit=0
+			WHERE 1=1 
+			 <if test="runnerId !=null and runnerId !=''">
+				and  c.USER_ID = #{runnerId}
+			</if>
+			<if test="startTime !=null and startTime !=''">
+				AND date_format(f.currentTime, '%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+			</if>
+			<if test="endTime !=null and endTime !=''">
+				AND date_format(f.currentTime, '%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+			</if>
+			group by time
+	</select>
+	
+	<select id="listbfls" parameterType="pd" resultType="pd">
+		SELECT
+				a.name,
+				a.detailPlace,
+				<choose>
+				<when test="mark==1">
+				date_format(a.time,'%Y-%m-%d %H:%i:%s') time,
+				</when>
+				<otherwise>
+				date_format(a.time,'%Y-%m-%d') time,
+				</otherwise>
+				</choose>
+				a.place
+			FROM
+					<choose>
+					<when test="mark==1">
+					ddVisit_info a
+					</when>
+					<otherwise>
+					(select * from ddVisit_info group by  name,detailPlace,place,date_format(time,'%Y-%m-%d')) a
+					</otherwise>
+					</choose>
+			WHERE
+				1=1
+				<if test="name !=null and name !=''">
+						and a.name = #{name}
+				</if>	
+				<if test="startTime !=null and startTime !=''">
+						and date_format(a.time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+						and date_format(a.time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>	
+				order by a.time desc
+	</select>
+	
+	
+	
+	<select id="showDxSwgwXstj" parameterType="pd" resultType="pd">
+		SELECT
+			a.user_id userId,
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			IFNULL(c.sl,0) khsl,
+			IFNULL(e.je,0) ddzje,
+			IFNULL(d.bfl,0) bfl
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+				on a.role_id =b.role_id	 and a.isQuit=0
+			left join
+				(select COUNT(*) sl,a.orderSaleId from customer_info a
+				inner join (select sum(debtAmount) je,customerId from order_info where delflag=0 group by customerId) b
+				on a.id=b.customerId
+				where a.delFlag=0 and b.je &gt;35000
+				<if test="time !=null and time !=''">
+					and date_format(createTime,'%Y-%m') = #{time}
+				</if>	
+				<!-- <if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if> -->
+				GROUP BY orderSaleId) c
+				on c.orderSaleId=a.user_Id
+			left join
+				(select sum(debtAmount) je,saleId from order_info where delflag=0 and debtAmount &gt;35000
+				<if test="time !=null and time !=''">
+					and date_format(createTime,'%Y-%m') = #{time}
+				</if>	
+				<!-- <if test="endTime !=null and endTime !=''">
+					and date_format(createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if> -->
+				group by saleId) e
+							on e.saleId=a.user_id 
+			left join
+				(select * from(
+					SELECT
+					IFNULL(count(c.name),0) bfl,
+					date_format(c.time,'%Y-%m') time,
+					a.USER_ID
+					FROM
+						sys_user a
+					inner JOIN 
+						(select * from ddVisit_info group by  name,place,date_format(time,'%Y-%m-%d')) c ON c.name = a.name  AND a.isQuit = 0
+					<!-- <if test="startTime !=null and startTime !=''">
+						and date_format(c.time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+					</if>	 -->
+					<if test="time !=null and time !=''">
+						and date_format(c.time,'%Y-%m') = #{time}
+					</if>
+					group by a.USER_ID
+					) d) d
+				on a.user_Id=d.user_Id
+			where b.role_id  in('90564dd8b75a4f6d815ce418462d401c')
+	</select>
+	
+	
+	
+	<select id="showDxSwgwYjmb1" parameterType="pd" resultType="pd">
+				<if test="type==0">
+				select COUNT(*) sl,date_format(a.createTime,'%Y-%m') time  from customer_info a
+				inner join (select sum(debtAmount) je,customerId from order_info  where delflag=0 group by customerId) b
+				on a.id=b.customerId
+				where a.delFlag=0 and b.je &gt;35000 and a.orderSaleId=#{saleId}
+				<if test="startTime !=null and startTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+				</if>	
+				<if test="endTime !=null and endTime !=''">
+					and date_format(a.createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+				</if>
+				GROUP BY
+				date_format(a.createTime,'%Y-%m')
+				</if>
+				<if test="type==1">
+						SELECT
+						IFNULL(sum(c.debtAmount),0) ddje,
+						  date_format(c.createTime,'%Y-%m') time
+						FROM
+							order_info c 
+						where c.delflag=0 and debtAmount &gt;35000
+							and c.saleId=#{saleId}
+						<if test="startTime !=null and startTime !=''">
+							and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+						</if>	
+						<if test="endTime !=null and endTime !=''">
+							and date_format(c.createTime,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+						</if>
+						GROUP BY
+						date_format(c.createTime,'%Y-%m')
+				</if>
+				<if test="type==2">
+						select * from(
+					SELECT
+					count(1) bfl,
+					date_format(c.time,'%Y-%m') time 
+					FROM
+						sys_user a
+					inner JOIN 
+						(select * from ddVisit_info group by name,place) c ON c.name = a.name  AND a.isQuit = 0
+					where a.user_Id=#{saleId}
+					<if test="startTime !=null and startTime !=''">
+						and date_format(c.time,'%Y-%m-%d %H:%i:%s') &gt;= #{startTime}
+					</if>	
+					<if test="endTime !=null and endTime !=''">
+						and date_format(c.time,'%Y-%m-%d %H:%i:%s') &lt;= #{endTime}
+					</if>
+						group by date_format(c.time, '%Y-%m')
+					) a
+				</if>
+	</select>
+	
+	
+	<update id="update" parameterType="pd">
+		update mark_info set msg=#{msg},createTime=#{endTime} where userId=#{saleId}
+	</update>
+	
+	<insert id="insert" parameterType="pd">
+		insert into mark_info(msg,userId,createTime) values(#{msg},#{saleId},#{endTime})
+	</insert>
+	
+	<select id="findObject" parameterType="pd" resultType="pd">
+		select * from mark_info where userId=#{saleId} and date_format(createTime,'%Y-%m-%d') &gt;= #{startTime}
+					and date_format(createTime,'%Y-%m-%d') &lt;= #{endTime}
+				
+	</select>
+</mapper>

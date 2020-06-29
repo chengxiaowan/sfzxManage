@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="LinkmanMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		linkman_info
+	</sql>
+	<!-- 字段 -->
+	<sql id="Field">
+		id,
+		relateId,
+		IFNULL(name,'') name,
+		IFNULL(mobilePhone,'') mobilePhone,
+		IFNULL(landline,'') landline,
+		IFNULL(email,'') email,
+		IFNULL(postion,'') postion,
+		IFNULL(fax,'') fax,
+		IFNULL(remark,'') remark,
+		IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+	</sql>
+
+	<sql id="insertField">
+		relateId,
+		name,
+		mobilePhone,
+		landline,
+		email,
+		qq,
+		wechat,
+		postion,
+		fax,
+		type,
+		address,
+		remark
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{customerId},
+		#{name},
+		#{mobilePhone},
+		#{landline},
+		#{email},
+		#{qq},
+		#{wechat},
+		#{postion},
+		#{fax},
+		#{type},
+		#{address},
+		#{remark}
+	</sql>
+
+	<!-- 用户列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.relateId,
+			b.contractSaleId contractSaleId,
+			b.orderSaleId orderSaleId,
+			IFNULL(b.name,'') companyName,
+			IFNULL(c.name,'') contractSaleName,
+			IFNULL(d.name,'') orderSaleName,
+			IFNULL(a.name,'') name,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.landline,'') landline,
+			IFNULL(a.email,'') email,
+			IFNULL(a.postion,'') postion,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		linkman_info a
+			inner join
+		customer_info b 
+		on a.relateId=b.id and b.delflag=0
+		<!--left join 
+		 (select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on b.id = c.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) d
+			on b.id = d.id  -->
+			left join 
+				sys_user c
+			on b.contractSaleId=c.user_id
+			left join 
+				sys_user d
+			on b.orderSaleId=d.user_id
+		where a.delFlag = 0 and a.type=0
+		<if test="pd.orderId !=null and pd.orderId != ''">
+			and a.id in (select linkmanId from order_linkman_info where orderId=#{pd.orderId})
+		</if>
+		<if test="pd.customerId !=null and pd.customerId != ''">
+			and a.relateId = #{pd.customerId}
+		</if>
+		<if test="pd.saleId !=null and pd.saleId != ''">
+			and (b.contractSaleId = #{pd.saleId}
+			or b.orderSaleId = #{pd.saleId})
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.mobilePhone LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+
+	<!-- 通过ID获取信息 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		<if test="id != null and id > 0">
+				select
+			a.id,
+			a.relateId,
+			a.relateId customerId,
+			b.contractSaleId contractSaleId,
+			b.orderSaleId orderSaleId,
+			IFNULL(b.name,'') companyName,
+			IFNULL(c.name,'') contractSaleName,
+			IFNULL(d.name,'') orderSaleName,
+			IFNULL(a.name,'') name,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.landline,'') landline,
+			IFNULL(a.email,'') email,
+			IFNULL(a.postion,'') postion,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		linkman_info a
+			inner join
+		customer_info b 
+		on a.relateId=b.id and b.delflag=0
+		<!--left join 
+		 (select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on b.id = c.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) d
+			on b.id = d.id  -->
+			left join 
+				sys_user c
+			on b.contractSaleId=c.user_id
+			left join 
+				sys_user d
+			on b.orderSaleId=d.user_id
+			where a.id = #{id}
+			<!-- <if test="relateId!=null and relateId!=''">
+				and relateId &lt;&gt;#{relateId}
+			</if> -->
+		</if>
+	</select>
+	
+	<select id="findById1" parameterType="pd" resultType="pd">
+		select * from linkMan_info where id=#{id} 
+	</select>
+
+	<!-- 检查是否有重复数据 -->
+	<select id="findByMobilePhone" parameterType="pd" resultType="pd">
+		<if test="mobilePhone != null and mobilePhone != ''">
+			select
+			<include refid="Field"></include>
+			from
+			<include refid="tableName"></include>
+			where delflag=0 and mobilePhone = #{mobilePhone} and type=0 
+			<if test="id != null and id > 0">
+				and id &lt;&gt; #{id}
+			</if>
+			limit 1
+		</if>
+	</select>
+
+	<!-- 新增联系人 -->
+	<insert id="save" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+			insert into
+			<include refid="tableName"></include>
+			(
+			<include refid="insertField"></include>
+			) values (
+			<include refid="FieldValue"></include>
+			)
+	</insert>
+	
+	<!-- 修改联系人 -->
+	<update id="update" parameterType="pd">
+		update 
+			<include refid="tableName"></include>
+		set editTime=#{editTime}    
+		<if test="name != null and name !=''">
+			 ,name=#{name}
+		</if>
+			 ,relateId=#{customerId}
+		<!-- <if test="mobilePhone != null and mobilePhone !=''"> -->
+			 ,mobilePhone=#{mobilePhone}
+		<!-- </if> -->
+		<!-- <if test="landline != null and landline !=''"> -->
+			 ,landline=#{landline}
+		<!-- </if> -->
+		<!-- <if test="email != null and email !=''"> -->
+			 ,email=#{email}
+		<!-- </if> -->
+		<!-- <if test="postion != null and postion !=''"> -->
+			 ,postion=#{postion}
+		<!-- </if> -->
+		<!-- <if test="fax != null and fax !=''"> -->
+			 ,fax=#{fax}
+		<!-- </if> -->
+			 ,remark=#{remark}
+			 ,wechat=#{wechat}
+			 ,qq=#{qq}
+		where 
+			id=#{id}
+	</update>
+	
+	<update id="update1" parameterType="pd">
+		update 
+			<include refid="tableName"></include>
+		set editTime=#{editTime}    
+		<if test="name != null and name !=''">
+			 ,name=#{name}
+		</if>
+		<if test="mobilePhone != null and mobilePhone !=''">
+			 ,mobilePhone=#{mobilePhone}
+		</if>
+		<if test="landline != null and landline !=''">
+			 ,landline=#{landline}
+		</if>
+		<if test="email != null and email !=''">
+			 ,email=#{email}
+		</if>
+		<if test="postion != null and postion !=''">
+			 ,postion=#{postion}
+		</if>
+		<if test="fax != null and fax !=''">
+			 ,fax=#{fax}
+		</if>
+		<if test="remark != null and remark !=''">
+			 ,remark=#{remark}
+		 </if>
+		 <if test="wechat != null and wechat !=''">
+		 	,wechat=#{wechat}
+		 </if>
+		 <if test="qq != null and qq !=''">
+		 	,qq=#{qq}
+		 </if>
+		where 
+			id=#{id}
+	</update>
+
+	<!-- 批量删除用户 -->
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<select id="listAll" parameterType="pd" resultType="pd">
+			select
+				linkmanName
+		from
+		saleCustomer_info where id=#{id}
+		<if test="key!=null and key!=''">
+			and linkmanName LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+<!-- 		<if test="orderId !=null and orderId != ''"> -->
+<!-- 			and a.id in (select linkmanId from order_linkman_info where orderId=#{orderId} -->
+<!-- 				<if test="flags==1"> -->
+<!-- 					and type in (0,1) -->
+<!-- 				</if> -->
+<!-- 				<if test="flags==2"> -->
+<!-- 					and type in (1,2) -->
+<!-- 				</if> -->
+<!-- 			) -->
+<!-- 		</if> -->
+	</select>
+	
+	
+	<select id="listAllLinkmanName" parameterType="pd" resultType="pd">
+			select
+				name linkmanName
+		from
+		linkman_info where type=#{type} and relateId=#{id} 
+		<if test="key!=null and key!=''">
+			and name LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+	</select>
+	
+	<insert id="saveOrderLinkman" parameterType="pd">
+		insert into order_linkman_info(orderId,linkmanId,type) values(#{orderId},#{id},#{flag})
+	</insert>
+
+</mapper>

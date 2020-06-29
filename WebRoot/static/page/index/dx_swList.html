@@ -1,0 +1,420 @@
+<!DOCTYPE HTML>
+<html>
+
+	<head>
+		<title></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link href="/static/ui/css/bootstrap.min.css?v=3.3.6" rel="stylesheet">
+		<link href="/static/ui/css/font-awesome.css?v=4.4.0" rel="stylesheet">
+		<link href="/static/ui/css/plugins/awesome-bootstrap-checkbox/awesome-bootstrap-checkbox.css" rel="stylesheet">
+		<link href="/static/ui/css/animate.css" rel="stylesheet">
+		<link href="/static/ui/css/style.css?v=4.1.0" rel="stylesheet">
+		<link rel="stylesheet" href="/static/ui/js/plugins/webuploader/webuploader.css">
+		<link rel="stylesheet" href="/static/ace/css/datepicker.css" />
+		<link href="/static/ui/css/htz.css" rel="stylesheet">
+		<link href="/static/ui/css/toastr.min.css" rel="stylesheet">
+		<style>
+			.active {
+				color: red;
+			}
+			
+			#info input.a {
+				border: none!important;
+			}
+		</style>
+	</head>
+
+	<body class="gray-bg">
+		<div class="wrapper wrapper-content hide" id="app">
+			<div class="panel panel-default">
+				<div class="panel-heading clearfix btns-hook">
+					<form role="form" class="form-inline" id="searchForm" @submit.prevent="getData(1)">
+						<div class="form-group" style="margin-right: 10px;">
+							<select style="width: 200px;" name="" id="saleId">
+								<option value="">请选择</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<select class="form-control" v-model="jidu">
+								<option value="0">一季度</option>
+								<option value="1">二季度</option>
+								<option value="2">三季度</option>
+								<option value="3">四季度</option>
+							</select>
+						</div>
+
+						<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> 查询</button>
+					</form>
+				</div>
+				<div class="panel-body">
+					<table class="table table-responsive table-bordered table-hover" id="mainTable">
+						<thead>
+							<tr>
+								<th>姓名</th>
+								<th>原级别</th>
+								<th>目标级别</th>
+								<th>到款金额(季度)</th>
+								<th>合同数量</th>
+								<th>委案金额</th>
+								<th>拜访量</th>
+								<th>考核建议</th>
+								<th>操作</th>
+							</tr>
+						</thead>
+						<tbody id="dataTable">
+							<tr v-for="(el,index) of c.list">
+								<td>{{el.NAME}}</td>
+								<td>{{el.orginalName}}</td>
+								<td>{{el.targetName}}</td>
+
+								<td v-if="parseInt(el.dkje.split('/')[0])<parseInt(el.dkje.split('/')[1])">
+									<span class="active">{{el.dkje.split('/')[0]}}</span>/<span>{{el.dkje.split('/')[1]}}</span>
+								</td>
+								<td v-else>
+									<span>{{el.dkje.split('/')[0]}}</span>/<span>{{el.dkje.split('/')[1]}}</span>
+								</td>
+								<td>
+									<span v-if="parseInt(el.htsl.split('/')[0].split(',')[0])<parseInt(el.htsl.split('/')[1].split(',')[0])" class="active">{{el.htsl.split('/')[0].split(',')[0]}}</span>/
+									<span v-else>{{el.htsl.split('/')[0].split(',')[0]}}</span>/
+									<span>{{el.htsl.split('/')[1].split(',')[0]}}</span>,
+
+									<span v-if="parseInt(el.htsl.split('/')[0].split(',')[1])<parseInt(el.htsl.split('/')[1].split(',')[1])" class="active">{{el.htsl.split('/')[0].split(',')[1]}}</span>/
+									<span v-else>{{el.htsl.split('/')[0].split(',')[1]}}</span>/
+									<span>{{el.htsl.split('/')[1].split(',')[1]}}</span>,
+
+									<span v-if="parseInt(el.htsl.split('/')[0].split(',')[2])<parseInt(el.htsl.split('/')[1].split(',')[2])" class="active">{{el.htsl.split('/')[0].split(',')[2]}}</span>/
+									<span v-else>{{el.htsl.split('/')[0].split(',')[2]}}</span>/
+									<span>{{el.htsl.split('/')[1].split(',')[2]}}</span>
+
+								</td>
+
+								<td>
+									<span v-if="parseInt(el.ddje.split('/')[0].split(',')[0])<parseInt(el.ddje.split('/')[1].split(',')[0])" class="active">{{el.ddje.split('/')[0].split(',')[0]}}</span>/
+									<span v-else>{{el.ddje.split('/')[0].split(',')[0]}}</span>/
+									<span>{{el.ddje.split('/')[1].split(',')[0]}}</span>,
+
+									<span v-if="parseInt(el.ddje.split('/')[0].split(',')[1])<parseInt(el.ddje.split('/')[1].split(',')[1])" class="active">{{el.ddje.split('/')[0].split(',')[1]}}</span>/
+									<span v-else>{{el.ddje.split('/')[0].split(',')[1]}}</span>/
+									<span>{{el.ddje.split('/')[1].split(',')[1]}}</span>,
+
+									<span v-if="parseInt(el.ddje.split('/')[0].split(',')[2])<parseInt(el.ddje.split('/')[1].split(',')[2])" class="active">{{el.ddje.split('/')[0].split(',')[2]}}</span>/
+									<span v-else>{{el.ddje.split('/')[0].split(',')[2]}}</span>/
+									<span>{{el.ddje.split('/')[1].split(',')[2]}}</span>
+								</td>
+								<td>
+									<span v-if="parseInt(el.bfl.split('/')[0].split(',')[0])<parseInt(el.bfl.split('/')[1].split(',')[0])" class="active">{{el.bfl.split('/')[0].split(',')[0]}}</span>/
+									<span v-else>{{el.bfl.split('/')[0].split(',')[0]}}</span>/
+									<span>{{el.bfl.split('/')[1].split(',')[0]}}</span>,
+
+									<span v-if="parseInt(el.bfl.split('/')[0].split(',')[1])<parseInt(el.bfl.split('/')[1].split(',')[1])" class="active">{{el.bfl.split('/')[0].split(',')[1]}}</span>/
+									<span v-else>{{el.bfl.split('/')[0].split(',')[1]}}</span>/
+									<span>{{el.bfl.split('/')[1].split(',')[1]}}</span>,
+
+									<span v-if="parseInt(el.bfl.split('/')[0].split(',')[2])<parseInt(el.bfl.split('/')[1].split(',')[2])" class="active">{{el.bfl.split('/')[0].split(',')[2]}}</span>/
+									<span v-else>{{el.bfl.split('/')[0].split(',')[2]}}</span>/
+									<span>{{el.bfl.split('/')[1].split(',')[2]}}</span>
+								</td>
+								<td>{{el.tips}}</td>
+								<td>
+									<a v-if="el.isSure == 0" class="btn btn-success" title="处理" @click="sub(el)"> <i class="ace-icon fa fa-pencil-square-o" title="处理"></i> 处理</a>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<div class="pull-left form form-inline">
+						<div class="form-group form-group-sm">
+							共 {{c.total}} 条数据,每页显示
+							<select @change="getData(1)" v-model="c.pageSize" class="form-control">
+								<option value="10">10</option>
+								<option value="20">20</option>
+								<option value="30">30</option>
+								<option value="40">40</option>
+								<option value="50">50</option>
+							</select> 条
+						</div>
+					</div>
+					<div class="pagi pull-right"></div>
+				</div>
+			</div>
+
+			<div class="" style="height:0;overflow:hidden">
+				<div class="row">
+					<div class="col-sm-12 form form-horizontal" id="info">
+						<div class="form-group" style="margin-top: 20px;">
+							<label class="col-sm-3 control-label"><span style="">姓名：</span></label>
+							<div class="col-sm-9">
+								<input type="text" v-model="info.name" class="form-control a" readonly="readonly">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label"><span style="">原级别：</span></label>
+							<div class="col-sm-9">
+								<input type="text" v-model="info.orginalName" class="form-control a" readonly="readonly">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label"><span style="">原级别基本薪资：</span></label>
+							<div class="col-sm-9" style="line-height: 34px;text-indent:12px ;">
+								{{info.jbxz||'暂无'}}
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label"><span style="">目标级别：</span></label>
+							<div class="col-sm-9">
+								<input type="text" v-model="info.targetName" class="form-control a" readonly="readonly">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label"><span style="">目标级别基本薪资：</span></label>
+							<div class="col-sm-9">
+								<input type="text" onkeyup="this.value=this.value.replace(/\D/g,'')" onafterpaste="this.value=this.value.replace(/\D/g,'')" v-model="info.mbxz" class="form-control" placeholder="请输入目标级别基本薪资" style="border: 1px solid #e5e6e7;">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label"><span style="">Tips：</span></label>
+							<div class="col-sm-9" style="line-height: 34px;text-indent:12px ;">
+								{{info.tipsDetail||'暂无'}}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+	</body>
+	<script src="/static/ui/js/jquery.min.js"></script>
+	<script src="/static/ui/js/bootstrap.min.js?v=3.3.6"></script>
+	<script src="/static/ui/js/toastr.min.js"></script>
+	<script src="/static/ui/js/hplus.js?v=4.1.0"></script>
+	<script src="/static/ui/js/plugins/metisMenu/jquery.metisMenu.js"></script>
+	<script src="/static/ui/js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+	<script src="/static/ui/js/plugins/layer/layer.min.js"></script>
+	<script src="/static/ui/js/plugins/laydate/laydate.js"></script>
+	<link rel="stylesheet" href="/static/ui/js/plugins/select2-4.0.3/css/select2.min.css">
+	<script src="/static/ui/js/plugins/select2-4.0.3/js/select2.min.js"></script>
+	<script src="/static/ace/js/date-time/bootstrap-datepicker.js"></script>
+	<script src="/static/ui/js/plugins/echarts/echarts.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="/static/ui/js/vue.js"></script>
+	<script src="/static/js/include/module/module_pagination.js"></script>
+
+	<script type="text/javascript">
+		var config = {
+			role: localStorage.userRole || "",
+			type: yo.getQueryString("type"),
+			id: yo.getQueryString("id"),
+			content: yo.getQueryString("content"),
+			api_showDetail: '/yjzb/showNoticDetail', //查询
+			api_cl: '/yjzb/doUserReportInfo'
+		}
+
+		window.app = new Vue({
+			el: '#app',
+			data: {
+				role: config.role,
+				c: [],
+				year: config.content.substr(0, 7),
+				jidu: 0,
+				postData: {},
+				info: {
+					name: '',
+					orginalName: '',
+					jbxz: '',
+					targetName: '',
+					mbxz: '',
+					tipsDetail: ''
+				}
+			},
+			created: function() {
+				var that = this;
+				document.getElementById("app").classList.remove("hide");
+			},
+			mounted: function() {
+				let that = this
+				var htz = config.content.substr(5, 2)
+				if(htz == '06') {
+					that.jidu = 0
+				} else if(htz == '09') {
+					that.jidu = 1
+				} else if(htz == '12') {
+					that.jidu = 2
+				} else if(htz == '03') {
+					that.jidu = 3
+				}
+				this.getData();
+				var startyear = laydate.render({
+					elem: '#startyear',
+					type: 'month',
+					done: function(value, date) {
+						that.year = value;
+					}
+				});
+				$('#saleId').select2({
+					placeholder: "请选择商务顾问",
+					language: 'zh-CN',
+					allowClear: 1,
+					ajax: {
+						url: "/user/getUserInfo",
+						dataType: 'json',
+						type: "post",
+						delay: 250,
+						data: function(params) {
+							return {
+								page: params.page || 1,
+								ROLE_ID: 'b729e9334ad64c15a4e47d88b8c2638f,e350acd05a6244c79136616302b7dfd6,008615f04f39499fb73e5f323add988a,6f247fed28e94194ac66020e55957496,28f1842e2463492a9eb6ddf0def91658,73340766cf3d43af91daff3128adad84,b62d6d19bed64ee199f2c1a5b252b57b',
+								data: {
+									q: params.term || "", // search term
+								}
+							};
+						},
+						processResults: function(data, params) {
+							params.page = params.page || 1;
+							$.each(data, function() {
+								this.id = this.USER_ID;
+								this.text = this.NAME;
+							})
+							return {
+								results: data,
+								pagination: {
+									more: data.length == 10
+								}
+							};
+						},
+						cache: true
+					},
+					minimumInputLength: 0
+				})
+
+			},
+			methods: {
+				/**
+				 * 载入中方法
+				 * 
+				 * @param {string} s 是否关闭
+				 */
+				loading: function(s) {
+					if(s == "close") layer.close(this.loadingSwitch)
+					else this.loadingSwitch = layer.load(3);
+				},
+				getData: function(page) {
+					var that = this;
+
+					$('body,html').scrollTop(0)
+					if(page) this.c.pageNum = page
+					that.loading();
+					var htz = config.content.substr(5, 2)
+					if(htz == '03') {
+						if(that.jidu == 0) {
+							that.year = Number(config.content.substr(0, 4)) - 1 + '-06'
+						} else if(that.jidu == 1) {
+							that.year = Number(config.content.substr(0, 4)) - 1 + '-09'
+						} else if(that.jidu == 2) {
+							that.year = Number(config.content.substr(0, 4)) - 1 + '-12'
+						} else if(that.jidu == 3) {
+							that.year = Number(config.content.substr(0, 4)) + '-03'
+						}
+					} else {
+						if(that.jidu == 0) {
+							that.year = config.content.substr(0, 4) + '-06'
+						} else if(that.jidu == 1) {
+							that.year = config.content.substr(0, 4) + '-09'
+						} else if(that.jidu == 2) {
+							that.year = config.content.substr(0, 4) + '-12'
+						} else if(that.jidu == 3) {
+							that.year = Number(config.content.substr(0, 4)) + 1 + '-03'
+						}
+					}
+
+					that.postData.userId = $('#saleId').val();
+					that.postData.time = that.year;
+					that.postData.id = config.id;
+					that.postData.type = config.type;
+					$.ajax({
+						url: config.api_showDetail,
+						async: false,
+						data: that.postData,
+						success: function(res) {
+							that.loading('close')
+							if(res.error == "00") {
+
+								that.c = res.result;
+								console.log(that.c)
+								//分页
+								if(that.pagi) {
+									$('.pagi').pagination('updatePages', that.c.pages)
+									if(page == 1) $('.pagi').pagination('goToPage', that.c.pageNum)
+								} else {
+									that.pagi = $('.pagi').pagination({
+										pages: that.c.pages, //总页数
+										showCtrl: true,
+										displayPage: 6,
+										currentPage: that.c.pageNum,
+										onSelect: function(num) {
+											that.c.pageNum = num
+											that.getData()
+											yo.scrollTo('body')
+										}
+									})
+								}
+							} else {
+								layer.msg(res.msg)
+							}
+						}
+					});
+				},
+				sub(el) {
+					let that = this;
+					that.info.name = el.NAME;
+					that.info.orginalName = el.orginalName;
+					that.info.jbxz = el.jbxz;
+					that.info.targetName = el.targetName;
+					that.info.mbxz = el.jbxz
+					const dialog = layer.open({
+						type: 1,
+						title: '操作',
+						closeBtn: 1,
+						content: $('#info'),
+						area: ['700px', '430px'],
+						btn: "确定",
+						btnAlign: 'c',
+						yes() {
+							if(el.tips == "辞退") {
+								that.info.tipsDetail = "辞退该员工后，该员工会自动变成离职员工，其潜在客户会自动退回到对应的公海。是否确定辞退该员工？"
+								return false
+							}
+							if(!that.info.mbxz) {
+								layer.msg('目标级别基本薪资不能为空')
+								return false
+							}
+							$.ajax({
+								type: "post",
+								url: config.api_cl,
+								async: true,
+								data: {
+									userId: el.userId,
+									tips: el.tips,
+									id: el.id,
+									targetRoleId: el.targetRoleId,
+									targetName: el.targetName,
+									xzId: el.xzId,
+									mbxz: that.info.mbxz,
+									month: config.content.substr(0, 10)
+								},
+								success: function(res) {
+									if(res.error == "00") {
+										layer.close(dialog)
+										layer.msg("操作成功")
+										that.getData();
+									} else {
+										layer.msg(res.msg)
+									}
+								}
+							});
+						}
+					});
+				},
+			}
+		})
+	</script>
+
+</html>

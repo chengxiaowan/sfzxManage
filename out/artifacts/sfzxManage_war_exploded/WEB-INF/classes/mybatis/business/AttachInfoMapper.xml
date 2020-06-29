@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AttachInfoMapper">
+	<!-- 通过附件ID获取相关的附件信息 -->
+	<select id="findAttachById" parameterType="pd" resultType="pd">
+		<if test="id != null and id != ''">
+			SELECT
+			id,
+			IFNULL(realPath, '') realPath,
+			IFNULL(originalFilename, '') originalFilename,
+			IFNULL(fileSize, '') fileSize,
+			IFNULL(url, '') url,
+			IFNULL(uploader, '') uploader,
+			IFNULL(date_format(uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+			IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			FROM `attach_info` WHERE delFlag = 0 AND id = #{id}
+		</if>
+	</select>
+
+	<select id="findAttachByRelateId" parameterType="pd" resultType="pd">
+		<if test="relateId != null and relateId != '' and relateId > 0">
+			SELECT
+			id,
+			realPath,
+			originalFilename,
+			fileSize,
+			url,
+			IFNULL(date_format(uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+			uploader,
+			CASE type
+				WHEN 0 THEN
+				'合同'
+				WHEN 1 THEN
+				'案件'
+				WHEN 2 THEN
+				'诉讼/仲裁'
+				WHEN 3 THEN
+				'回款明细'
+				WHEN 4 THEN
+				'案件报告'
+				WHEN 5 THEN
+				'律师函'
+				WHEN 6 THEN
+				'案件关闭'
+				WHEN 7 THEN
+				'案件结案'
+				WHEN 8 THEN
+				'案件交接'
+				WHEN 9 THEN
+				'案件归档'
+				WHEN 10 THEN
+				'案件跟进'
+				WHEN 11 THEN
+				'快递'
+				ELSE
+				'未知'
+				END type,
+			IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			FROM `attach_info` WHERE delFlag = 0 AND orderId = #{orderId}
+			<if test="relateId != null and relateId != ''">
+				AND relateId = #{relateId}
+			</if>
+			<if test="type != null and type != ''">
+				AND type = #{type}
+			</if>
+		</if>
+	</select>
+
+	<insert id="saveAttach" parameterType="pd">
+		insert into attach_info
+		(
+		orderId,
+		relateId,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		uploadTime,
+		uploader,
+		type
+		)values
+		(
+		#{orderId},
+		#{relateId},
+		#{realPath},
+		#{originalFilename},
+		#{fileSize},
+		#{url},
+		#{uploadTime},
+		#{uploader},
+		#{type}
+		)
+	</insert>
+
+	<!-- 批量插入附件 (但参数list传递 collection必为list) -->
+	<insert id="saveMultiAttach" parameterType="java.util.List">
+		insert into attach_info
+		(
+		orderId,
+		relateId,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		uploadTime,
+		uploader,
+		type
+		)values
+		<foreach collection="list" item="attachs" index="index" separator=",">
+			(
+			#{attachs.orderId},
+			#{attachs.relateId},
+			#{attachs.realPath},
+			#{attachs.originalFilename},
+			#{attachs.fileSize},
+			#{attachs.url},
+			#{attachs.uploadTime},
+			#{attachs.uploader},
+			#{attachs.type}
+			)
+		</foreach>
+	</insert>
+
+	<update id="deleteAttach" parameterType="list">
+		update attach_info set delFlag = 1 where id in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</update>
+</mapper>

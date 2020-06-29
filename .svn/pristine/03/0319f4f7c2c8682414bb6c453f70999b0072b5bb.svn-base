@@ -1,0 +1,2411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WorkBenchMapper">
+	<!-- 我的任务列表(分页,接口用) -->
+	<select id="taskList" parameterType="pd" resultType="pd">
+		SELECT
+		w.id,
+		<!-- IFNULL(u.`NAME`,'') name, -->
+		CASE w.type
+		WHEN 0 THEN
+		'申请外访'
+		WHEN 1 THEN
+		'指派任务'
+		WHEN 2 THEN
+		'待开发票'
+		WHEN 3 THEN
+		'待发快递'
+		WHEN 4 THEN
+		'待发报告'
+		ELSE
+		'未知'
+		END type,
+		CASE w.isCompleted
+		WHEN 0
+		THEN
+		'未完成'
+		WHEN 1 THEN
+		'已完成'
+		ELSE
+		'未知'
+		END isCompleted,
+		
+		case when w.type=0 then ''
+			 when w.type=1 then ''
+			 when w.type=2 then c.custoemrName
+			 when w.type=3 then d.target
+			 when w.type=4 then e.customerName
+			 end customerName,
+		case when w.type=0 then ''
+			 when w.type=1 then ''
+			 when w.type=2 then c.debtorName
+			 when w.type=3 then ''
+			  when w.type=4 then e.debtorName
+			 end debtorName,
+		u.name fqrName,
+		u1.name zxrName,
+		w.relateId,
+		IFNULL(date_format(w.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(w.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM warn_info w
+		left JOIN sys_user u ON w.userId = u.USER_ID  and u.isQuit=0 
+		left JOIN sys_user u1 ON w.doId = u1.USER_ID  and u1.isQuit=0 
+		left join 
+			(select b.custoemrName,b.debtorName,c.id paymentId,a.currentMoney,b.cType,b.syMoney,a.currentTime,a.remark,
+			case when b.status=0 then  b.commissionRate
+				 when b.status=3 or b.status=4 then b.lawCommissionRate 
+				 else (case when b.lawCommissionRate is null then b.commissionRate
+					 	   when b.lawCommissionRate = '' then b.commissionRate
+						   else b.lawCommissionRate end) 
+				 end commissionRate, 
+			case when b.status=0 then a.currentMoney*b.commissionRate*b.discount/10000 
+				 when b.status=3 or b.status=4 then a.currentMoney*b.lawCommissionRate*b.susongdiscount/10000 
+				 else a.currentMoney*(case when b.lawCommissionRate is null then b.commissionRate*(case when b.discount is null or b.discount ='' then '100' else b.discount end)
+					 	   				when b.lawCommissionRate = '' then b.commissionRate*(case when b.discount is null or b.discount ='' then '100' else b.discount end)
+						   				else b.lawCommissionRate*(case when b.susongdiscount is null or b.susongdiscount ='' then '100' else b.susongdiscount end) end)/10000
+				 end yjje 
+			 	from paymentdetail_info a
+			inner join 
+			invoice_info c on a.id=c.relateId  
+			inner join 
+			(select
+				a.id,
+				IFNULL(d.name,'') custoemrName,
+				IFNULL(e.name,'') debtorName,
+				a.commissionRate,
+				a.cType,
+				a.status,
+				case when a.discount is null or a.discount ='' then '100' else a.discount end discount,
+				case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end susongdiscount,
+				a.fixedMoney,
+				a.lawCommissionRate,
+				a.debtAmount-h.totalMoney syMoney
+			from
+				order_info a 
+			left join 
+				sys_user b
+				on a.saleId=b.USER_ID
+			left join 	
+				sys_user c
+				on a.runnerId =c.USER_ID
+			left join 	
+				customer_info d
+				on a.customerId =d.id
+			left join
+				debtor_info e
+				on a.debtorId=e.id
+			left join 
+				report_info g
+				on a.id = g.orderId and g.type in(1,2)
+			left join 
+				report_info f
+				on a.id = f.orderId and f.type=3
+			left join
+				(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+				on a.id= h.orderId
+			where a.delFlag = 0 ) b
+				on a.orderId=b.id
+			)  c
+			 on w.relateId=c.paymentId and w.type=2		
+		left join 
+			express_info d
+		on w.relateId =d.id and w.type=3 
+		<!-- 待发报告 -->
+		left join 
+				(SELECT
+					a.id,
+					a.orderId,
+					a.title,
+					a.email orderEmail,
+					a.remark,
+					a.isRecieve,
+					a.reportType,
+					a.status,
+					a.isSend,
+					b.orderNo,
+					c.name customerName,
+					d.name runnerName,
+					c.email,
+					a.hxjh,
+					e.name debtorName,
+					b.debtAmount debtAmount,
+					f.totalMoney totalMoney,
+					b.debtAmount-f.totalMoney syMoney,
+					IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+					IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+					FROM orderreport_info a
+					inner join order_info b on a.orderId=b.id 
+					INNER JOIN customer_info c ON b.customerId = c.id
+					left join 	
+						sys_user d
+						on b.runnerId =d.USER_ID
+					left join
+						debtor_info e
+						on b.debtorId=e.id and e.delflag=0
+					left join
+						(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) f
+						on b.id= f.orderId
+					WHERE a.delflag = 0 AND c.delFlag = 0 AND b.delflag = 0 and a.status=2) e
+				on w.relateId = e.id and w.type=4
+		WHERE w.delflag = 0 and w.isCompleted=0
+		<choose>
+		 <when test="flag ==0">
+			and w.doId = #{doId}  
+		</when> 
+		 <when test="flag ==1">
+			and w.doId = #{doId} 
+		</when> 
+		 <when test="flag ==2">
+			and (w.doId in (select user_Id from sys_user where role_id in ('02178e62f17b4926bb7014f3ad5a1ebe','45efba0a0fa946aebf7befe614c74e55'))
+				 or w.doId = #{doId}
+				)
+		</when> 
+		 <when test="flag ==3">
+			and (w.doId in (select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+				or w.doId = #{doId}
+				)
+		</when> 
+		<when test="flag ==4">
+			and w.doId = #{doId} 
+		</when> 
+		</choose>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 开始时间检索 -->
+			AND w.createTime &gt;= #{createTimeStart}
+		</if>
+		<if test="createTimeEnd != null and createTimeEnd != ''"><!-- 结束时间检索 -->
+			AND w.createTime &lt;= #{createTimeEnd}
+		</if>
+		order by w.id desc
+	</select>
+
+	<!-- 我的客户列表(分页,接口用) -->
+	<!-- <select id="customerList" parameterType="pd" resultType="pd">
+		SELECT
+		DISTINCT c.id,
+		IFNULL(c.`name`, '') `name`,
+		IFNULL(c.mobilePhone, '') mobilePhone,
+		IFNULL(c.taxIdentificationNumber,'') taxIdentificationNumber,
+		IFNULL(c.fax, '') fax
+		FROM order_info o
+		INNER JOIN customer_info c ON o.customerId = c.id
+		WHERE o.delflag = 0 AND c.delFlag = 0
+		<if test="saleId != null and saleId != ''">按销售检索
+			AND o.saleId = #{saleId}
+		</if>
+		<if test="runnerId != null and runnerId != ''">按运作检索
+			AND o.runnerId = #{runnerId}
+		</if>
+		ORDER BY c.id DESC
+	</select> -->
+
+	<!-- 我的联系人列表(分页,接口用) -->
+<!-- 	<select id="linkManList" parameterType="pd" resultType="pd">
+		SELECT
+		DISTINCT l.id,
+		IFNULL(l.`name`, '') `name`,
+		IFNULL(l.mobilePhone, '') mobilePhone,
+		IFNULL(l.landline,'') landline,
+		IFNULL(l.postion, '') postion
+		FROM order_info o
+		INNER JOIN customer_info c ON o.customerId = c.id
+		INNER JOIN linkman_info l ON l.relateId = c.id
+		WHERE o.delflag = 0 AND c.delFlag = 0 AND l.delflag = 0
+		<if test="saleId != null and saleId != ''">按销售检索
+			AND o.saleId = #{saleId}
+		</if>
+		<if test="runnerId != null and runnerId != ''">按运作检索
+			AND o.runnerId = #{runnerId}
+		</if>
+		ORDER BY
+		l.id DESC
+	</select> -->
+
+	<!-- 我的案件列表(分页,接口用) -->
+	<select id="orderList" parameterType="pd" resultType="pd">
+	select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(i.gjStatus,'') gjStatus,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left join 
+			(SELECT a.* from process_info a 
+				inner join(
+				select max(createTime) createTime,orderId from process_info GROUP BY orderId) b
+				on a.orderid=b.orderid and a.createTime=b.createTime) i
+			on a.id=i.orderId
+		where a.delFlag = 0 and a.status not in(1,2) 
+		<if test="saleId != null and saleId != ''"><!-- 按销售检索 -->
+			AND a.saleId = #{saleId} and (a.status=0 or a.status=3 or a.status=4)
+		</if>
+		<if test="runnerId != null and runnerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{runnerId} and a.status in(0,3,4)
+		</if>
+		<if test="lawerId != null and lawerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{lawerId} and (a.status=0 or a.status=3 or a.status=4) 
+		</if>
+		<if test="isSaleDirector != null and isSaleDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.saleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.status=0 -->
+		</if>
+		<if test="isRunDirector != null and isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe') -->  
+		</if>
+		ORDER BY
+		a.id DESC
+	</select>
+
+	<!-- 我的任务列表(分页) -->
+	<select id="tasklistPage" parameterType="page" resultType="pd">
+		SELECT
+		w.id,
+		<!-- IFNULL(u.`NAME`,'') name, -->
+		CASE w.type
+		WHEN 0 THEN
+		'申请外访'
+		WHEN 1 THEN
+		'指派任务'
+		WHEN 2 THEN
+		'待开发票'
+		WHEN 3 THEN
+		'待发快递'
+		WHEN 4 THEN
+		'待发报告'
+		ELSE
+		'未知'
+		END type,
+		CASE w.isCompleted
+		WHEN 0
+		THEN
+		'未完成'
+		WHEN 1 THEN
+		'已完成'
+		ELSE
+		'未知'
+		END isCompleted,
+		u.name fqrName,
+		u1.name zxrName,
+		w.relateId,
+		IFNULL(date_format(w.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(w.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM warn_info w
+		left JOIN sys_user u ON w.userId = u.USER_ID  and u.isQuit=0 
+		left JOIN sys_user u1 ON w.doId = u1.USER_ID  and u1.isQuit=0 
+		WHERE w.delflag = 0
+		<choose>
+		 <when test="pd.flag ==0">
+			and w.doId = #{pd.doId}
+		</when> 
+		 <when test="pd.flag ==1">
+			and w.doId= #{pd.doId}
+		</when> 
+		 <when test="pd.flag ==2">
+			and (w.doId in (select user_Id from sys_user where role_id in ('02178e62f17b4926bb7014f3ad5a1ebe','45efba0a0fa946aebf7befe614c74e55'))
+				 or w.doId = #{pd.doId}
+				)
+		</when> 
+		 <when test="pd.flag ==3">
+			and (w.doId in (select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+				 or w.doId = #{pd.doId}
+				)
+		</when>
+		 <when test="pd.flag ==4">
+			and w.doId = #{pd.doId}
+		</when> 
+		</choose>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND (
+				u1.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') 
+				OR u.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 开始时间检索 -->
+			AND w.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 结束时间检索 -->
+			AND w.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.type != null and pd.type != ''"><!-- 按任务类型检索 -->
+			AND w.type = #{pd.type}
+		</if>
+		<if test="pd.isCompleted != null and pd.isCompleted != ''"><!-- 按完成状态检索 -->
+			AND w.isCompleted = #{pd.isCompleted}
+		</if>
+		<if test="pd.orderId != null and pd.orderId != ''"><!-- 按案件检索 -->
+			AND w.orderId = #{pd.orderId}
+		</if>
+		<if test="pd.userId != null and pd.userId != ''"><!-- 按用户检索 -->
+			AND w.userId = #{pd.userId}
+		</if>
+		order by w.id desc
+	</select>
+	
+	
+	<select id="customerList" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.contractSaleId,
+			a.orderSaleId,
+			IFNULL(a.provinceName,'') provinceName,
+			IFNULL(a.cityName,'') cityName,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.companyAddress,'') companyAddress,
+			IFNULL(a.name,'') name,
+			IFNULL(b.contractSaleName,'') contractSaleName,
+			IFNULL(c.orderSaleName,'') orderSaleName,
+			IFNULL(a.bankAccountName,'') bankAccountName,
+			IFNULL(a.bankName,'') bankName,
+			IFNULL(a.bankNumber,'') bankNumber,
+			IFNULL(a.taxIdentificationNumber,'') taxIdentificationNumber,
+			IFNULL(a.email,'') email,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.status,'') status,
+			IFNULL(a.otherContract,'') otherContract,
+			IFNULL(a.postCode,'') postCode,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			customer_info a 
+			left join 
+				(select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) b
+			on a.id = b.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on a.id = c.id 
+			where a.delFlag = 0 
+		<if test="saleId != null and saleId != ''"><!-- 注册时间检索 -->
+			and a.orderSaleId =#{saleId} 
+		</if>
+		<if test="isSaleDirector != null and isSaleDirector != ''"><!-- 注册时间检索 -->
+			and a.orderSaleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+		</if>
+		ORDER BY c.id DESC
+	</select>
+	
+	<!-- 我的客户列表(分页) -->
+	<select id="customerlistPage" parameterType="page" resultType="pd">
+			select
+			a.id,
+			a.contractSaleId,
+			a.orderSaleId,
+			IFNULL(a.provinceName,'') provinceName,
+			IFNULL(a.cityName,'') cityName,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.companyAddress,'') companyAddress,
+			IFNULL(a.name,'') name,
+			IFNULL(b.contractSaleName,'') contractSaleName,
+			IFNULL(c.orderSaleName,'') orderSaleName,
+			IFNULL(a.bankAccountName,'') bankAccountName,
+			IFNULL(a.bankName,'') bankName,
+			IFNULL(a.bankNumber,'') bankNumber,
+			IFNULL(a.taxIdentificationNumber,'') taxIdentificationNumber,
+			IFNULL(a.email,'') email,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.status,'') status,
+			IFNULL(a.otherContract,'') otherContract,
+			IFNULL(a.postCode,'') postCode,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			customer_info a 
+			left join 
+				(select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) b
+			on a.id = b.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on a.id = c.id 
+			where a.delFlag = 0 
+		<if test="pd.saleId != null and pd.saleId != ''"><!-- 注册时间检索 -->
+			and a.orderSaleId =#{pd.saleId} 
+		</if>
+		<if test="pd.isSaleDirector != null and pd.isSaleDirector != ''"><!-- 注册时间检索 -->
+			and a.orderSaleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.provinceName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.cityName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			b.contractSaleName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			<if test="pd.saleId == null">
+			or
+			c.orderSaleName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			</if>
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+
+	<!-- 我的联系人列表(分页) -->
+	<select id="linkManlistPage" parameterType="page" resultType="pd">
+			select
+			a.id,
+			a.relateId,
+			b.contractSaleId contractSaleId,
+			b.orderSaleId orderSaleId,
+			IFNULL(b.name,'') companyName,
+			IFNULL(c.contractSaleName,'') contractSaleName,
+			IFNULL(d.orderSaleName,'') orderSaleName,
+			IFNULL(a.name,'') name,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.landline,'') landline,
+			IFNULL(a.email,'') email,
+			IFNULL(a.postion,'') postion,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		linkman_info a
+			inner join
+		customer_info b 
+		on a.relateId=b.id and b.delflag=0
+		left join 
+		(select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on b.id = c.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) d
+			on b.id = d.id 
+		where a.delFlag = 0 and a.type=0 
+		<if test="pd.saleId != null and pd.saleId != ''"><!-- 按销售检索 -->
+			AND b.orderSaleId = #{pd.saleId}
+		</if>
+		<if test="pd.isSaleDirector != null and pd.isSaleDirector != ''"><!-- 注册时间检索 -->
+			and b.orderSaleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+		</if>
+<!-- 		<if test="pd.runnerId != null and pd.runnerId != ''">按运作检索
+			AND o.runnerId = #{pd.runnerId}
+		</if>
+ -->		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.mobilePhone LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.contractSaleName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			<if test="pd.saleId == null">
+				or
+				d.orderSaleName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			</if>
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			AND a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			AND a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		ORDER BY
+		a.id DESC
+	</select>
+	
+	<select id="linkManList" parameterType="pd" resultType="pd">
+			select
+			a.id,
+			a.relateId,
+			b.contractSaleId contractSaleId,
+			b.orderSaleId orderSaleId,
+			IFNULL(b.name,'') companyName,
+			IFNULL(c.contractSaleName,'') contractSaleName,
+			IFNULL(d.orderSaleName,'') orderSaleName,
+			IFNULL(a.name,'') name,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.landline,'') landline,
+			IFNULL(a.email,'') email,
+			IFNULL(a.postion,'') postion,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			from
+			linkman_info a
+				inner join
+			customer_info b 
+			on a.relateId=b.id and b.delflag=0
+			left join 
+			(select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+				on b.id = c.id 
+				left join 
+					(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) d
+				on b.id = d.id 
+			where a.delFlag = 0 and a.type=0 
+		<if test="saleId != null and saleId != ''"><!-- 按销售检索 -->
+			AND b.orderSaleId = #{saleId}
+		</if>
+		<if test="isSaleDirector != null and isSaleDirector != ''"><!-- 注册时间检索 -->
+			and b.orderSaleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+		</if>
+		ORDER BY
+		a.id DESC
+	</select>
+	
+	
+	<!-- 案件报告列表(分页) -->
+	<select id="orderReportlistPage" parameterType="page" resultType="pd">
+		SELECT
+		a.id,
+		a.orderId,
+		a.title,
+		b.cType,
+		b.discount,
+		b.susongdiscount,
+		b.fixedMoney,
+		a.linkmanName,
+		case when b.lawCommissionRate is null then ''
+				 when b.lawCommissionRate = '' then '' 
+			else CONCAT(b.lawCommissionRate*(case when b.susongdiscount is null then 100
+				 when b.susongdiscount = '' then 100 else b.susongdiscount end)/100,'%') end lawCommissionRate,
+			case when b.commissionRate is null then ''
+				 when b.commissionRate = '' then '' 
+			else CONCAT(b.commissionRate*(case when b.discount is null then 100
+				 when b.discount = '' then 100 else b.discount end)/100,'%') end commissionRate,
+		a.email orderEmail,
+		a.remark,
+		a.isRecieve,
+		a.reportType,
+		a.status,
+		a.isSend,
+		b.orderNo,
+		c.name customerName,
+		d.name runnerName,
+		c.email,
+		e.name debtorName,
+		b.debtAmount debtAmount,
+		f.totalMoney totalMoney,
+		b.debtAmount-IFNULL(f.totalMoney,0) syMoney,
+		IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+		FROM orderreport_info a
+		inner join order_info b on a.orderId=b.id 
+		INNER JOIN customer_info c ON b.customerId = c.id
+		left join 	
+			sys_user d
+			on b.runnerId =d.USER_ID
+		left join
+			debtor_info e
+			on b.debtorId=e.id and e.delflag=0
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) f
+			on b.id= f.orderId
+		WHERE a.delflag = 0 AND c.delFlag = 0 AND b.delflag = 0 and a.status=2
+		<if test="pd.isRecieve != null and pd.isRecieve != ''"><!-- 关键词检索 -->
+			and a.isRecieve =#{pd.isRecieve}
+		</if>
+		<if test="pd.isSend != null and pd.isSend != ''"><!-- 关键词检索 -->
+			AND a.isSend=#{pd.isSend} 
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND (b.`orderNo` LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') 
+				 OR c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				 OR d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				 )
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			AND a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			AND a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		ORDER BY
+		a.id DESC
+	</select>
+	
+	<update id="updateReportStatus" parameterType="pd">
+			update orderreport_info set editTime=#{editTime}
+				<choose>
+				<when test="flag !=null">
+					,isSend=#{isSend}
+					,content=#{content} 
+				</when>
+				<otherwise>
+					,isSend=1 	
+				</otherwise>
+				</choose>
+			where id= #{id}
+	</update>
+	
+	<select id="finOrderReportById" parameterType="pd" resultMap="map1">
+			SELECT
+				o.id,
+				o.orderId,
+				o.title,
+				o.hxjh,
+				o.email orderEmail,
+				o.remark,
+				o.isRecieve,
+				o.reportType,
+				o.status,
+				o.isSend,
+				a.orderNo,
+				o.linkmanName,
+				d.name customerName,
+				d.email,
+				d.fax,
+				IFNULL(date_format(o.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(o.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			a.debtAmount-h.totalMoney syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type 
+				FROM orderreport_info o
+				inner join order_info a 
+				on o.orderId=a.id  
+				left join 
+				sys_user b
+					on a.saleId=b.USER_ID
+				left join 	
+				sys_user c
+					on a.runnerId =c.USER_ID
+				left join 	
+					customer_info d
+					on a.customerId =d.id and d.delflag=0 
+				left join
+					debtor_info e
+					on a.debtorId=e.id and e.delflag=0 
+				left join 
+					report_info g
+					on a.id = g.orderId and g.type in(1,2)
+				left join 
+					report_info f
+					on a.id = f.orderId and f.type=3
+				left join
+					(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+					on a.id= h.orderId
+				where o.id = #{id} 
+	</select>
+	
+	<resultMap type="pd" id="map1">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findAttachInfo"></collection>
+	</resultMap>
+	
+	<select id="findAttachInfo" parameterType="Integer"  resultType="pd">
+		select * from attach_info where type=4 and relateId=#{id}  
+	</select>
+
+	<!-- 我的案件列表(分页) -->
+	<select id="orderlistPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+				case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			case when a.debtAmount-IFNULL(h.totalMoney,0)>=0 then a.debtAmount-IFNULL(h.totalMoney,0) 
+			 else 0 end syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(i.gjStatus,'') gjStatus,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(j.createTime,'%Y-%m-%d %H:%i:%s'),'') reportTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left join 
+			(SELECT a.* from process_info a 
+				inner join(
+				select max(createTime) createTime,orderId from process_info GROUP BY orderId) b
+				on a.orderid=b.orderid and a.createTime=b.createTime) i
+			on a.id=i.orderId
+		left join 
+			(SELECT a.* from orderreport_info a 
+				inner join(
+				select max(createTime) createTime,orderId from orderreport_info GROUP BY orderId) b
+				on a.orderid=b.orderid and a.createTime=b.createTime) j
+			on a.id=j.orderId
+		where a.delFlag = 0
+		 <if test="pd.status == null or pd.status == ''">
+					and a.status in(0,3,4)
+		</if> 
+		<if test="pd.saleId != null and pd.saleId != ''"><!-- 按销售检索 -->
+			AND a.saleId = #{pd.saleId}  
+		</if>
+		<if test="pd.runnerId != null and pd.runnerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{pd.runnerId} 
+		</if>
+		<if test="pd.lawerId != null and pd.lawerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{pd.lawerId} 
+		</if>
+		<if test="pd.isSaleDirector != null and pd.isSaleDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.saleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.status=0 -->
+		</if>
+		<if test="pd.isRunDirector != null and pd.isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe')  and a.status=0 -->
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+				and
+				(
+				d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				<!-- <if test="pd.runnerId == null and pd.lawerId ==null "> -->
+				or
+				e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				<!-- </if> -->
+				<if test="pd.saleId == null ">
+				or
+				b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				</if>
+				or
+				c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				)
+				or a.status in(0,1,2,3,4)
+		</if>
+		<if test="pd.type != null and pd.type != ''">
+			and a.type = #{pd.type}
+		</if>
+		<if test="pd.status != null and pd.status != ''">
+			and a.status =#{pd.status}
+		</if>
+		<if test="pd.isFiled != null and pd.isFiled != ''">
+			and a.isFiled =#{pd.isFiled}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			AND a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			AND a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		ORDER BY a.runTime desc,i.createTime DESC
+	</select>
+	
+	
+	<select id="listAll" parameterType="pd" resultType="pd">
+			select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			IFNULL(h.totalMoney,0) totalMoney,
+			case when a.debtAmount-IFNULL(h.totalMoney,0)>=0 then a.debtAmount-IFNULL(h.totalMoney,0) 
+			 else 0 end syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		where a.delFlag = 0 
+		<if test="status == null or status == ''">
+					and a.status in(0,3,4)
+		</if> 
+		<if test="saleId != null and saleId != ''"><!-- 按销售检索 -->
+			AND a.saleId = #{saleId}  
+		</if>
+		<if test="runnerId != null and runnerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{runnerId} 
+		</if>
+		<if test="lawerId != null and lawerId != ''"><!-- 按运作检索 -->
+			AND a.runnerId = #{lawerId} 
+		</if>
+		<if test="isSaleDirector != null and isSaleDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.saleId in(select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.status=0 -->
+		</if>
+		<if test="isRunDirector != null and isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.status in(0,3,4)
+			<!-- and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe')  and a.status=0 -->
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+				and
+				(
+				d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+				<if test="runnerId == null and lawerId ==null ">
+				or
+				e.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+				</if>
+				<if test="saleId == null ">
+				or
+				b.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+				</if>
+				or
+				c.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+				)
+		</if>
+		<if test="type != null and type != ''">
+			and a.type = #{type}
+		</if>
+		<if test="status != null and status != ''">
+			and a.status =#{status}
+		</if>
+		<if test="isFiled != null and isFiled != ''">
+			and a.isFiled =#{isFiled}
+		</if>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 注册时间检索 -->
+			AND a.createTime &gt;= #{createTimeStart}
+		</if>
+		<if test="createTimeEnd != null and createTimeEnd != ''"><!-- 注册时间检索 -->
+			AND a.createTime &lt;= #{createTimeEnd}
+		</if>
+		ORDER BY a.id DESC
+	</select>
+
+	<!-- 按ID获取任务信息 -->
+	<select id="findTaskById" parameterType="pd" resultType="pd">
+		<if test="id != null and id > 0 and type != null and type != ''">
+			<if test="type == 0">
+				SELECT
+				w.id,
+				IFNULL(w.title,'') taskName,
+				w.relateId visitId,
+				IFNULL(o.orderNo, '') orderNo,
+				IFNULL(l.`name`, '') linkman,
+				IFNULL(v.reason, '') reason,
+				IFNULL(v.leaderShip, '') leaderShip,
+				IFNULL(v.evaluatSelf, '') evaluatSelf,
+				IFNULL(date_format(v.realTime,'%Y-%m-%d'),'') realTime,
+				w.type,
+				CASE w.type
+				WHEN 0 THEN
+				'外访'
+				WHEN 1 THEN
+				'案件报告'
+				WHEN 2 THEN
+				'欠款催收'
+				WHEN 3 THEN
+				'发律师函'
+				WHEN 4 THEN
+				'回款计划'
+				WHEN 5 THEN
+				'诉讼'
+				WHEN 6 THEN
+				'仲裁'
+				WHEN 7 THEN
+				'回款明细'
+				WHEN 8 THEN
+				'下月回款计划'
+				ELSE
+				'未知'
+				END typeDesc,
+				w.isCompleted,
+				CASE w.isCompleted
+				WHEN 0 THEN
+				'未完成'
+				WHEN 1 THEN
+				'已完成'
+				ELSE
+				'未知'
+				END
+				completedStatus,
+				IFNULL(w.remark, '') remark,
+				IFNULL(date_format(v.evaluateTime,'%Y-%m-%d %H:%i:%s'),'') evaluateTime
+				FROM warn_info w
+				INNER JOIN visit_info v ON w.orderId = v.orderId AND v.auditStatus = 1
+				LEFT JOIN order_info o ON w.orderId = o.id
+				LEFT JOIN linkman_info l ON v.linkmanId = l.id
+				WHERE w.id = #{id}
+			</if>
+			<if test="type == 2">
+				where w.id = #{id}
+			</if>
+			<if test="type == 3">
+
+				where w.id = #{id}
+			</if>
+			<if test="type == 4">
+
+				where w.id = #{id}
+			</if>
+			<if test="type == 5">
+
+				where w.id = #{id}
+			</if>
+		</if>
+	</select>
+
+	<!-- 执行任务 -->
+	<update id="doTask" parameterType="pd">
+		<if test="id != null and id != '' and id > 0">
+			update warn_info set editTime = #{editTime}
+			<if test="isCompleted != null and isCompleted != ''">
+				,isCompleted = #{isCompleted}
+			</if>
+			<if test="remark != null and remark != ''">
+				,remark = #{remark}
+			</if>
+			where id = #{id}
+		</if>
+	</update>
+	
+
+
+	<update id="updateVisit" parameterType="pd">
+		update visit_info set editTime = #{editTime}
+		<if test="evaluatSelf != null and evaluatSelf != ''">
+			,evaluatSelf = #{evaluatSelf}
+		</if>
+		<if test="realTime != null and realTime != ''">
+			,realTime = #{realTime}
+		</if>
+		where id = #{visitId}
+	</update>
+
+	<!-- 按案件ID获取任务信息 -->
+	<select id="findTaskByOrderId" parameterType="pd" resultType="pd">
+		<if test="orderId != null and orderId != '' and orderId > 0 and type != null and type != ''">
+			<!-- 案件报告 -->
+			<if test="type == 1">
+				SELECT id,orderId,title,`status`,reportType,IFNULL(email,'') email,IFNULL(remark,'') remark,IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime FROM
+				`orderreport_info` WHERE
+				orderId=#{orderId} AND delFlag=0
+				<if test="id!=null and id!=''">
+					and id=#{id}
+				</if>
+				<choose>
+					<!-- 查询本月数据 -->
+					<when test="flag != null and flag != ''">
+						AND date_format(createTime,'%Y-%m')=date_format(now(),'%Y-%m') LIMIT 1
+					</when>
+					<otherwise>
+						ORDER BY id DESC
+					</otherwise>
+				</choose>
+			</if>
+			<!-- 欠款催收 -->
+			<if test="type == 2">
+				SELECT
+				id,
+				orderId,
+				warnType,
+				IFNULL(remark, '') remark,
+				IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+				FROM `debturgereport_info` WHERE orderId = #{orderId} AND delFlag = 0
+			</if>
+			<!-- 律师函 -->
+			<if test="type == 3">
+				SELECT
+				l.id,
+				l.orderId,
+				l.sublawyerId,
+				u.`NAME` sublawyerName,
+				l.`status`,
+				CASE l.`status`
+				WHEN 0 THEN
+				'待发送'
+				WHEN 1 THEN
+				'进行中'
+				WHEN 2 THEN
+				'已完成'
+				WHEN 3 THEN
+				'已取消'
+				ELSE
+				'未知'
+				END statusDesc,
+				IFNULL(l.remark, '') remark,
+				IFNULL(date_format(l.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(l.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+				FROM lawyer_info l
+				LEFT JOIN sys_user u ON l.sublawyerId = u.USER_ID
+				WHERE l.delflag = 0 AND l.orderId = #{orderId}
+			</if>
+			<!-- 回款计划 -->
+			<if test="type == 4">
+				SELECT
+				p.id,
+				p.orderId,
+				IFNULL(date_format(p.planTime, '%Y-%m-%d'),'') planTime,
+				p.onceMoney,
+				p.periods,
+				IFNULL(p.remark, '') remark,
+				IFNULL(date_format(p.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime,
+				<!-- d.currentPeriods, -->
+				d.currentMoney,
+				IFNULL(date_format(d.currentTime, '%Y-%m-%d'),'') currentTime,
+				d.currentBalance,
+				IFNULL(d.remark, '') dremark
+				FROM paymentplan_info p LEFT JOIN
+				paymentdetail_info d ON p.orderId = d.orderId <!-- AND p.periods = d.currentPeriods -->
+				WHERE p.orderId = #{orderId} AND p.delFlag = 0 ORDER BY p.periods
+			</if>
+			<!-- 申请诉讼、仲裁 -->
+			<if test="type == 5 or type == 6">
+				<!-- SELECT -->
+				<!-- l.id, -->
+				<!-- l.orderId, -->
+				<!-- l.applyType, -->
+				<!-- u.`NAME` applyer, -->
+				<!-- l.applyType, -->
+				<!-- IFNULL(l.remark, '') remark, -->
+				<!-- CASE l.auditStatus -->
+				<!-- WHEN 0 THEN -->
+				<!-- '待审核' -->
+				<!-- WHEN 1 THEN -->
+				<!-- '已审核' -->
+				<!-- WHEN 2 THEN -->
+				<!-- '审核未通过' -->
+				<!-- ELSE -->
+				<!-- '未知' -->
+				<!-- END auditStatus, -->
+				<!-- u1.`NAME` auditer, -->
+				<!-- IFNULL(date_format(l.auditTime,'%Y-%m-%d %H:%i:%s'),'') auditTime, -->
+				<!-- IFNULL(l.auditIdea, '') auditIdea, -->
+				<!-- IFNULL(date_format(l.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime, -->
+				<!-- IFNULL(date_format(l.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime -->
+				<!-- FROM `lawsuitapply_info` l -->
+				<!-- LEFT JOIN sys_user u ON l.applyerId = u.USER_ID -->
+				<!-- LEFT JOIN sys_user u1 ON l.auditerId = u1.USER_ID -->
+				<!-- WHERE -->
+				<!-- l.delFlag = 0 AND l.orderId = #{orderId}; -->
+				SELECT
+				h.id,
+				h.orderId,
+				o.orderNo,
+				h.recipientId,
+				u.`NAME` recipientName,
+				IFNULL(h.reason, '') reason,
+			<!-- 	CASE h.`status`
+				WHEN 0 THEN
+				'进行中'
+				WHEN 1
+				THEN
+				'已完毕'
+				ELSE
+				'未知'
+				END statusDesc, -->
+				IFNULL(date_format(h.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(h.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+				FROM `handover_info` h
+				INNER JOIN order_info o ON h.orderId = o.id
+				LEFT JOIN sys_user u ON h.recipientId = u.USER_ID
+				WHERE h.delflag = 0 AND h.orderId=#{orderId}
+			</if>
+			<!-- 回款明细 -->
+			<if test="type == 7">
+				SELECT
+				id,
+				orderId,
+				currentMoney,
+				IFNULL(date_format(currentTime, '%Y-%m-%d'),'') currentTime,
+				currentBalance,
+				onceMoney,
+				planTime,
+				IFNULL(remark, '') remark
+				FROM `paymentdetail_info` WHERE orderId = #{orderId} AND delFlag = 0
+			</if>
+			<!-- 下月回款计划 -->
+			<if test="type == 8">
+				SELECT
+			<!-- 	p.id, -->
+				o.status,
+				o.cType,
+				o.lawCommissionRate,
+				o.debtAmount,
+				o.fixedMoney,
+				case when o.discount is null or o.discount ='' then '100' else o.discount end discount,
+				case when o.susongdiscount is null or o.susongdiscount ='' then '100' else o.susongdiscount end susongdiscount,
+				IFNULL(o.commissionRate,'') commissionRate,
+				p.orderId,
+				IFNULL(
+				date_format(p.planTime, '%Y-%m-%d'),'') planTime,
+				p.money,
+				<!-- p.commissionRate, -->
+				p.commissionaMount,
+				IFNULL(p.remark, '') remark,
+				IFNULL(date_format(p.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(p.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+				FROM `proximopaymentplan_info` p
+				right JOIN order_info o ON p.orderId = o.id
+				WHERE  o.id = #{orderId} AND o.delflag = 0
+			</if>
+		</if>
+	</select>
+
+	<!-- 执行我的案件任务 -->
+	<insert id="doOrderTask" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		<!-- 案件报告 -->
+		<if test="type == 1">
+			<choose>
+				<when test="id != null and id != '' and id > 0">
+					update orderreport_info set editTime = current_timestamp()
+					<if test="email != null and email != ''">
+						,email = #{email}
+					</if>
+					<if test="status != null and status != ''">
+						,`status` = #{status}
+					</if>
+					<if test="title != null and title != ''">
+						,title = #{title}
+					</if>
+					<if test="remark != null and remark != ''">
+						,remark = #{remark}
+					</if>
+					<if test="reportType != null and reportType != ''">
+						,reportType = #{reportType}
+					</if>
+					<if test="hxjh != null and hxjh != ''">
+						,hxjh = #{hxjh}
+					</if>
+					where id = #{id}
+				</when>
+				<otherwise>
+					insert into orderreport_info (orderId,`status`,title,email,remark,reportType,hxjh,aduiterId,userId) values (#{orderId},#{status},#{title},#{email},#{remark},#{reportType},#{hxjh},#{aduiterId},#{userId})
+				</otherwise>
+			</choose>
+		</if>
+		<!-- 欠款催收 -->
+		<if test="type == 2">
+			<choose>
+				<when test="id != null and id != '' and id > 0">
+					update debturgereport_info set editTime = current_timestamp()
+					<if test="warnType != null and warnType != ''">
+						,warnType = #{warnType}
+					</if>
+					<if test="remark != null and remark != ''">
+						,remark = #{remark}
+					</if>
+					where id = #{id}
+				</when>
+				<otherwise>
+					insert into debturgereport_info (orderId,warnType,remark) values (#{orderId},#{warnType},#{remark})
+				</otherwise>
+			</choose>
+		</if>
+		<!--律师函 -->
+		<if test="type == 3">
+			<choose>
+				<when test="id != null and id != '' and id > 0">
+					update lawyer_info set editTime = current_timestamp()
+					<if test="sublawyerId != null and sublawyerId != ''">
+						,sublawyerId = #{sublawyerId}
+					</if>
+					<if test="remark != null and remark != ''">
+						,remark = #{remark}
+					</if>
+					where id = #{id}
+				</when>
+				<otherwise>
+					insert into lawyer_info (orderId,userId,sublawyerId,remark) values (#{orderId},#{userId},#{sublawyerId},#{remark})
+				</otherwise>
+			</choose>
+		</if>
+		<!-- 回款计划 -->
+		<if test="type == 4">
+			insert into paymentplan_info (orderId,planTime,onceMoney,periods,remark,type) values (#{orderId},#{planTime},#{onceMoney},#{periods},#{remark},#{types})
+		</if>
+		<!-- 申请诉讼、仲裁 -->
+		<if test="type == 5 or type == 6">
+			<choose>
+			<when test="id != null and id != '' and id > 0">
+			update lawsuitapply_info set editTime = current_timestamp()
+			<if test="applyerId != null and applyerId != ''">
+			,applyerId = #{applyerId}
+			</if>
+			<if test="applyType != null and applyType != ''">
+			,applyType = #{applyType}
+			</if>
+			<if test="remark != null and remark != ''">
+			,remark = #{remark}
+			</if>
+			where id = #{id}
+			</when>
+			<otherwise>
+			insert into lawsuitapply_info (orderId,applyerId,applyType,remark) values (#{orderId},#{applyerId},#{applyType},#{remark})
+			</otherwise>
+			</choose>
+<!-- 			<choose> -->
+<!-- 				<when test="id != null and id != '' and id > 0"> -->
+<!-- 					update handover_info set editTime = #{editTime} -->
+<!-- 					<if test="orderId != null and orderId != ''"> -->
+<!-- 						,orderId = #{orderId} -->
+<!-- 					</if> -->
+<!-- 					<if test="recipientId != null and recipientId != ''"> -->
+<!-- 						,recipientId = #{recipientId} -->
+<!-- 					</if> -->
+<!-- 					<if test="recipientName != null and recipientName != ''"> -->
+<!-- 						,recipientName = #{recipientName} -->
+<!-- 					</if> -->
+<!-- 					<if test="handoverTime != null and handoverTime != ''"> -->
+<!-- 						,handoverTime = #{handoverTime} -->
+<!-- 					</if> -->
+<!-- 					<if test="status != null and status != ''"> -->
+<!-- 						,status = #{status} -->
+<!-- 					</if> -->
+<!-- 					,reason = #{reason} -->
+<!-- 					where id = #{id} -->
+<!-- 				</when> -->
+<!-- 				<otherwise> -->
+<!-- 					insert into handover_info (orderId,recipientId,recipientName,handoverTime,reason,status) values (#{orderId},#{recipientId},#{recipientName},#{handoverTime},#{reason},#{status}) -->
+<!-- 				</otherwise> -->
+<!-- 			</choose> -->
+		</if>
+		<!-- 回款明细 -->
+		<if test="type == 7">
+			<choose>
+				<when test="planId != null and planId != '' and planId > 0">
+					update paymentdetail_info set editTime = #{editTime}
+					<if test="currentMoney != null and currentMoney != ''">
+						,currentMoney = #{currentMoney}
+					</if>
+					<if test="currentTime != null and currentTime != ''">
+						,currentTime = #{currentTime}
+					</if>
+					<if test="currentBalance != null and currentBalance != ''">
+						,currentBalance = #{currentBalance}
+					</if>
+					<!-- <if test="currentPeriods != null and currentPeriods != ''">
+						,currentPeriods = #{currentPeriods}
+					</if> -->
+					<if test="remark != null and remark != ''">
+						,remark = #{remark}
+					</if>
+					<if test="planTime != null and planTime != ''">
+						,planTime = #{planTime}
+					</if>
+					<if test="onceMoney != null and onceMoney != ''">
+						,onceMoney = #{onceMoney}
+					</if>
+					where id = #{planId}
+				</when>
+				<otherwise>
+						insert into paymentdetail_info (orderId,currentMoney,currentTime,currentBalance,remark,planTime,onceMoney) values
+						(#{orderId},#{currentMoney},#{currentTime},#{currentBalance},#{remark},#{planTime},#{onceMoney})
+				</otherwise>
+			</choose>
+		
+		</if>
+		<!-- 下月回款计划 -->
+		<if test="type == 8">
+			<choose>
+				<when test="id != null and id != '' and id > 0">
+					update proximopaymentplan_info set editTime = current_timestamp()
+					<if test="planTime != null and planTime != ''">
+						,planTime = #{planTime}
+					</if>
+					<if test="money != null and money != ''">
+						,money = #{money}
+					</if>
+					<if test="commissionRate != null and commissionRate != ''">
+						,commissionRate = #{commissionRate}
+					</if>
+					<if test="commissionaMount != null and commissionaMount != ''">
+						,commissionaMount = #{commissionaMount}
+					</if>
+					<if test="remark != null and remark != ''">
+						,remark = #{remark}
+					</if>
+					where id = #{id}
+				</when>
+				<otherwise>
+					insert into proximopaymentplan_info (orderId,planTime,money,commissionRate,commissionaMount,remark) values
+					(#{orderId},#{planTime},#{money},#{commissionRate},#{commissionaMount},#{remark})
+				</otherwise>
+			</choose>
+		</if>
+	</insert>
+
+	<!-- 删除回款计划 -->
+	<delete id="deletePaymentplan" parameterType="String">
+		<if test="orderId != null and orderId != '' and orderId > 0">
+			delete from paymentplan_info where orderId = #{orderId} and type=0
+		</if>
+	</delete>
+	
+	<!-- 删除回款明细 -->
+	<delete id="deletePaymentdetail" parameterType="String">
+		<if test="orderId != null and orderId != '' and orderId > 0">
+			delete from paymentdetail_info where orderId = #{orderId}
+		</if>
+	</delete>
+
+	<!-- 我的案件列表(分页) -->
+	<select id="paymentplanlistPage" parameterType="page" resultType="pd">
+		<if test="pd.orderId != null and pd.orderId != ''">
+			<choose>
+			<when test="pd.id !=null and pd.id !=''">
+				SELECT
+				<!-- p.id, -->
+				d.id planId,
+			<!-- 	p.orderId, -->
+			<!-- 	IFNULL(date_format(p.planTime, '%Y-%m-%d'),'') planTime, -->
+				<!-- p.onceMoney,
+				p.periods, -->
+				<!-- IFNULL(p.remark, '') remark, -->
+				<!-- IFNULL(date_format(p.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime, -->
+				<!-- d.currentPeriods currentPeriods, -->
+				d.currentMoney currentMoney,
+				IFNULL(date_format(d.currentTime,'%Y-%m-%d %H:%i:%s'),'') currentTime,
+				IFNULL(d.remark, '') remark,
+				d.currentBalance currentBalance 
+				FROM <!-- paymentplan_info p LEFT JOIN --> paymentdetail_info d <!-- ON p.orderId = d.orderId --> <!-- AND p.periods = d.currentPeriods -->
+				WHERE  d.id = #{pd.id} <!--  and p.orderId = #{pd.orderId} --><!--  AND p.delFlag = 0 ORDER BY p.periods -->
+			</when>
+			<otherwise>
+				SELECT
+				p.id,
+				p.orderId,
+				IFNULL(date_format(p.planTime, '%Y-%m-%d'),'') planTime,
+				p.onceMoney,
+				p.periods,
+				IFNULL(p.remark, '') remark,
+				IFNULL(date_format(p.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime,
+			<!-- 	d.currentPeriods currentPeriods, -->
+				d.currentMoney currentMoney 
+				FROM paymentplan_info p LEFT JOIN paymentdetail_info d ON p.orderId = d.orderId <!-- AND p.periods = d.currentPeriods -->
+				WHERE p.orderId = #{pd.orderId} AND p.delFlag = 0 ORDER BY p.periods
+			</otherwise>
+			</choose>
+		</if>
+	</select>
+
+	<!-- 我的案件列表(分页) -->
+	<select id="relateTasklistPage" parameterType="page" resultType="pd">
+		<if test="pd.orderId != null and pd.orderId != ''">
+			SELECT
+			id,
+			IFNULL(title,'') taskName,
+			type,
+			CASE type
+			WHEN 0 THEN
+			'外访'
+			WHEN 1 THEN
+			'案件报告'
+			WHEN 2 THEN
+			'欠款催收'
+			WHEN 3 THEN
+			'发律师函'
+			WHEN 4 THEN
+			'回款计划'
+			WHEN 5 THEN
+			'诉讼'
+			WHEN 6 THEN
+			'仲裁'
+			WHEN 7 THEN
+			'回款明细'
+			WHEN 8 THEN
+			'下月回款计划'
+			ELSE
+			'未知'
+			END typeDesc,
+			IFNULL(remark,'') remark,
+			IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			FROM `warn_info`
+			WHERE delflag = 0 AND isCompleted = 0 AND orderId = #{pd.orderId}
+			<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+				AND title LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			</if>
+			<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 开始时间检索 -->
+				AND createTime &gt;= #{pd.createTimeStart}
+			</if>
+			<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 结束时间检索 -->
+				AND createTime &lt;= #{pd.createTimeEnd}
+			</if>
+			<if test="pd.type != null and pd.type != ''">
+				AND type = #{pd.type}
+			</if>
+		</if>
+	</select>
+	
+	<select id="findPaymentPlan" parameterType="pd" resultType="pd">
+		select IFNULL(date_format(planTime,'%Y-%m-%d'),'') planTime,onceMoney,periods from paymentplan_info where orderId=#{orderId} and planTime &gt;= #{timeStart} and planTime &lt;= #{timeEnd} 
+	</select>
+	
+	<insert id="saveWarnTask" parameterType="pd">
+		insert into  warn_info(userId,relateId,type,doId) values(#{userId},#{id},2,#{doId})
+	</insert>
+	
+	<insert id="saveWarnTask1" parameterType="pd">
+		insert into  warn_info(userId,relateId,type,doId) values(#{userId},#{id},4,#{doId})
+	</insert>
+	
+	<select id="findRepportById" parameterType="pd" resultType="pd">
+		SELECT
+			a.orderId,
+			a.reportType
+			FROM orderreport_info a where id=#{id}
+	</select>
+	
+	
+	<select id="findTaskById1" parameterType="pd" resultType="pd">
+		select * from warn_info where id=#{id}  
+	</select>
+	
+	
+	<select id="findWarnById" parameterType="pd" resultType="pd">
+		SELECT
+		w.id,
+		<!-- IFNULL(u.`NAME`,'') name, -->
+		CASE w.type
+		WHEN 0 THEN
+		'申请外访'
+		WHEN 1 THEN
+		'指派外访'
+		WHEN 2 THEN
+		'待开发票'
+		WHEN 3 THEN
+		'待发快递'
+		WHEN 4 THEN
+		'待发报告'
+		ELSE
+		'未知'
+		END type,
+		w.isCompleted,
+		w.remark,
+		w.doId,
+		
+		<!-- 指派任务 -->
+		b.name fqr,
+		b.wcqk,
+		b.reason zpReason,
+		IFNULL(date_format(b.createTime,'%Y-%m-%d %H:%i:%s'),'') zpCreateTime,
+		
+		<!-- 申请外访 -->
+		a.target sqTarget,
+		a.visitman sqVisitman,
+		a.mobilPhone sqMobilPhone,
+		IFNULL(a.type,'') sqtype,
+		IFNULL(a.reason,'') sqreason,
+		IFNULL(a.evaluatSelf,'') sqevaluatSelf,
+		IFNULL(a.yjsc,'') sqyjsc,
+		IFNULL(a.yjts,'') sqyjts,
+		IFNULL(a.kssj,'') sqkssj,
+		IFNULL(a.ksrq,'') sqksrq,
+		IFNULL(date_format(a.yjhdwsj,'%Y-%m-%d'),'') sqyjhdwsj,
+		IFNULL(date_format(a.yjhdwrq,'%Y-%m-%d'),'') sqyjhdwrq,
+		IFNULL(a.yqxg,'') sqyqxg,
+		IFNULL(date_format(a.sjhgssj,'%Y-%m-%d'),'') sqsjhgssj,
+		IFNULL(date_format(a.sjhgsrq,'%Y-%m-%d'),'') sqsjhgsrq,
+		a.wcqk sqwcqk,
+		a.wwcyy sqwwcyy,
+		IFNULL(a.auditStatus,'') auditStatus,
+		IFNULL(a.leaderShip,'') leaderShip,
+		
+		<!-- 代开发票-->
+		c.orderId dkfpOrderId,
+		c.paymentId,
+		c.custoemrName,
+		c.debtorName,
+		c.commissionRate,
+		c.syMoney,
+		c.currentMoney,
+		c.yjje,
+		c.cType,
+		c.remark remark1,
+		IFNULL(date_format(c.currentTime,'%Y-%m-%d'),'') hkTime,
+		<!-- 待发快递  -->
+		
+		
+		
+		
+		<!-- 待发报告  -->
+		e.orderId dfbgOrderId,
+		e.id dfbgId,
+		e.debtorName bgDebtorName,
+		e.customerName bgCustomerName,
+		e.title bgTitle,
+		e.reportType,
+		e.orderEmail,
+		e.remark bgRemark,
+		e.hxjh,
+		e.runnerName bgRunnerName,
+		
+		
+		IFNULL(date_format(w.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(w.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM warn_info w
+		left JOIN sys_user u ON w.userId = u.USER_ID  and u.isQuit=0 
+		left join visit_info a  on w.relateId=a.id and w.type=0
+		left join (select a.*,b.name from visit_info a,sys_user b where a.auditerId=b.user_id) b on w.relateId=b.id and w.type=1
+		left join 
+		(select b.custoemrName,b.debtorName,c.id paymentId,a.currentMoney,b.cType,b.syMoney,a.currentTime,a.remark,a.orderId,
+		case when b.status=0 then  b.commissionRate
+			 when b.status=3 or b.status=4 then b.lawCommissionRate 
+			 else (case when b.lawCommissionRate is null then b.commissionRate
+				 	   when b.lawCommissionRate = '' then b.commissionRate
+					   else b.lawCommissionRate end) 
+			 end commissionRate, 
+		case when b.status=0 then a.currentMoney*b.commissionRate*b.discount/10000 
+			 when b.status=3 or b.status=4 then a.currentMoney*b.lawCommissionRate*b.susongdiscount/10000 
+			 else a.currentMoney*(case when b.lawCommissionRate is null then b.commissionRate*(case when b.discount is null or b.discount ='' then '100' else b.discount end)
+				 	   				when b.lawCommissionRate = '' then b.commissionRate*(case when b.discount is null or b.discount ='' then '100' else b.discount end)
+					   				else b.lawCommissionRate*(case when b.susongdiscount is null or b.susongdiscount ='' then '100' else b.susongdiscount end) end)/10000
+			 end yjje 
+		 	from paymentdetail_info a
+		inner join 
+		invoice_info c on a.id=c.relateId  
+		inner join 
+		(select
+			a.id,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			a.commissionRate,
+			a.cType,
+			a.status,
+			case when a.discount is null or a.discount ='' then '100' else a.discount end discount,
+			case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end susongdiscount,
+			a.fixedMoney,
+			a.lawCommissionRate,
+			a.debtAmount-h.totalMoney syMoney
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+			debtor_info e
+			on a.debtorId=e.id
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		where a.delFlag = 0 ) b
+			on a.orderId=b.id
+		)  c
+		 on w.relateId=c.paymentId and w.type=2
+		<!-- 待发快递 -->
+		left join 
+			express_info d
+		on w.relateId =d.id and w.type=3 
+		<!-- 待发报告 -->
+		left join 
+				(SELECT
+					a.id,
+					a.orderId,
+					a.title,
+					a.email orderEmail,
+					a.remark,
+					a.isRecieve,
+					a.reportType,
+					a.status,
+					a.isSend,
+					b.orderNo,
+					c.name customerName,
+					d.name runnerName,
+					c.email,
+					a.hxjh,
+					e.name debtorName,
+					b.debtAmount debtAmount,
+					f.totalMoney totalMoney,
+					b.debtAmount-f.totalMoney syMoney,
+					IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+					IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+					FROM orderreport_info a
+					inner join order_info b on a.orderId=b.id 
+					INNER JOIN customer_info c ON b.customerId = c.id
+					left join 	
+						sys_user d
+						on b.runnerId =d.USER_ID
+					left join
+						debtor_info e
+						on b.debtorId=e.id and e.delflag=0
+					left join
+						(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) f
+						on b.id= f.orderId
+					WHERE a.delflag = 0 AND c.delFlag = 0 AND b.delflag = 0 and a.status=2) e
+					on w.relateId = e.id and w.type=4
+					<choose>
+					<when test="paymentId !=null and paymentId !=''">
+						WHERE c.paymentId=#{paymentId} 
+					</when>
+					<otherwise>
+						WHERE w.id=#{id} 
+					</otherwise>
+					</choose>
+	</select>
+	
+	<select id="xyhklistPage" parameterType="page"  resultType="pd">
+			select
+			a.id,
+			a.customerId,
+			c.name runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,	
+			IFNULL(a.debtAmount,'') debtAmount,
+			IFNULL(a.fixedMoney,'') fixedMoney,
+			IFNULL(a.cType,'') cType,
+			f.money,
+			f.commissionaMount,
+			case when f.commissionRate is null then ''
+				 when f.commissionRate = '' then '' 
+			else CONCAT(f.commissionRate,'%') end commissionRate,
+			IFNULL(date_format(f.planTime,'%Y-%m-%d %H:%i:%s'),'') planTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+			inner join 
+			proximopaymentplan_info f
+		on a.id =f.orderId 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+		debtor_info e
+			on a.debtorId=e.id
+		where a.delflag=0 and f.delflag=0 and date_format(f.planTime,'%Y-%m')=date_format(DATE_add(curdate(), INTERVAL 1 MONTH),'%Y-%m')
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND (d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') OR e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and f.planTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and f.planTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.runnerId != null and pd.runnerId != ''"><!-- 注册时间检索 -->
+			and a.runnerId = #{pd.runnerId}
+		</if>
+		</select>
+		
+		<select id="xyhklistPage1" parameterType="page"  resultType="pd">
+		select
+			a.id,
+			c.name runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,	
+			IFNULL(a.debtAmount,'') debtAmount,
+			IFNULL(a.fixedMoney,'') fixedMoney,
+			IFNULL(a.cType,'') cType,
+			f.onceMoney money,
+			case when a.status=0 then f.onceMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+			 when a.status=3 or a.status=4 then f.onceMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+			 else f.onceMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+				 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+					   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+			 end commissionaMount,
+			 
+			case when a.status=0 
+				 then (case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+						else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+			when a.status=3 or a.status=4 then (case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+				 else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end) 
+			else (case when a.lawCommissionRate is null then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+				 	   when a.lawCommissionRate = '' then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+					   else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end)
+				 end commissionRate,
+			IFNULL(date_format(f.planTime,'%Y-%m-%d %H:%i:%s'),'') planTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+			inner join 
+			(select * from paymentplan_info where date_format(planTime,'%Y-%m')=date_format(DATE_add(curdate(), INTERVAL 1 MONTH),'%Y-%m')) f
+			on a.id =f.orderId 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+		debtor_info e
+			on a.debtorId=e.id
+		where a.delflag=0 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND (d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') OR e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and f.planTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and f.planTime &lt;= #{pd.createTimeEnd}
+		</if>
+	</select>
+	
+	<update id="updateWarnInfo"  parameterType="pd">
+		update warn_info set isCompleted=1 where relateId=#{id} and type=4 
+	</update>
+	<update id="doUpdate" parameterType="pd">
+		update warn_info set isCompleted=#{wcqk},remark=#{remark} where id=#{id} 
+	</update>
+	
+	<update id="updateVisitInfo" parameterType="pd">
+		update visit_info set wcqk=#{wcqk} where id=#{relateId} 
+	</update>
+	
+	<select id="findById" parameterType="pd" resultType="pd">
+		select userId from orderreport_info where id=#{id} 
+	</select>
+	
+	<select id="shList" resultType="pd">
+			SELECT
+			*
+		FROM
+			(
+				SELECT
+					a.id,
+					'外访' type,
+					c. NAME sqname,
+					IFNULL(
+						date_format(
+							a.createTime,
+							'%Y-%m-%d %H:%i:%s'
+						),
+						''
+					) createTime,
+					'' customerName,
+					'' debtorName,
+					'' debtorId,
+					a.userId userId
+				FROM
+					visit_info a
+				INNER JOIN sys_user c
+				WHERE
+					a.userId = c.user_id
+				AND a.delflag = 0
+				AND c.isQuit = 0
+				AND a.auditStatus = 0
+				AND a.sqorzp = 0
+				UNION ALL
+					SELECT
+						a.id,
+						'诉讼/仲裁' type,
+						c. NAME sqname,
+						IFNULL(
+							date_format(
+								a.createTime,
+								'%Y-%m-%d %H:%i:%s'
+							),
+							''
+						) createTime,
+						d.customerName,
+						d.debtorName,
+						d.debtorId,
+						a.applyerId userId
+					FROM
+						lawsuitapply_info a
+					INNER JOIN sys_user c
+					INNER JOIN (
+						SELECT
+							a.id,
+							b. NAME debtorName,
+							b.id debtorId,
+							c. NAME customerName
+						FROM
+							order_info a,
+							debtor_info b,
+							customer_info c
+						WHERE
+							a.debtorId = b.id
+						AND a.customerId = c.id
+					) d ON a.orderId = d.id
+					WHERE
+						a.applyerId = c.user_id
+					AND a.delflag = 0
+					AND c.isQuit = 0
+					AND a.auditStatus = 0
+					UNION ALL
+						SELECT
+							a.id,
+							'案件报告' type,
+							c. NAME sqname,
+							IFNULL(
+								date_format(
+									a.createTime,
+									'%Y-%m-%d %H:%i:%s'
+								),
+								''
+							) createTime,
+							d.customerName,
+							d.debtorName,
+							d.debtorId,
+							a.userId userId
+						FROM
+							orderreport_info a
+						INNER JOIN sys_user c
+						INNER JOIN (
+							SELECT
+								a.id,
+								b. NAME debtorName,
+								b.id debtorId,
+								c. NAME customerName
+							FROM
+								order_info a,
+								debtor_info b,
+								customer_info c
+							WHERE
+								a.debtorId = b.id
+							AND a.customerId = c.id
+						) d ON a.orderId = d.id
+						WHERE
+							a.userId = c.user_id
+						AND a.delflag = 0
+						AND c.isQuit = 0
+						AND a. STATUS = 1
+			) a
+		WHERE
+			1 = 1
+	<choose>
+		<when test="flag ==1">
+			and (a.userId in (select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe') 
+				 <!-- or a.userId = #{userId} -->
+				 )
+		</when> 
+		 <when test="flag ==2">
+			and (a.userId in (select user_Id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+				<!-- or a.userId =#{userId} -->
+				)
+		</when> 
+		<when test="flag==3">
+			and 1=1 
+		</when>
+		<otherwise>
+			and 1 &lt;&gt; 1 
+		</otherwise>
+	</choose>
+	</select>
+	
+	<select id="findWarnById1" resultType="pd">
+		SELECT
+					a.id,
+					a.orderId,
+					a.title bgTitle,
+					a.email orderEmail,
+					a.remark,
+					a.isRecieve,
+					a.reportType,
+					a.status,
+					a.isSend,
+					b.orderNo,
+					c.name bgCustomerName,
+					d.name bgRunnerName,
+					c.email,
+					a.hxjh,
+					e.name bgDebtorName,
+					b.debtAmount debtAmount,
+					f.totalMoney totalMoney,
+					b.debtAmount-f.totalMoney syMoney,
+					IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+					IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+					FROM orderreport_info a
+					inner join order_info b on a.orderId=b.id 
+					INNER JOIN customer_info c ON b.customerId = c.id
+					left join 	
+						sys_user d
+						on b.runnerId =d.USER_ID
+					left join
+						debtor_info e
+						on b.debtorId=e.id and e.delflag=0
+					left join
+						(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) f
+						on b.id= f.orderId
+					WHERE a.delflag = 0 AND c.delFlag = 0 AND b.delflag = 0 and a.id= #{id}
+	</select>
+	
+	<select id="findNextMoney" parameterType="pd" resultType="pd">
+		<!-- select * from(
+		select case when a.type=0 then a.planTime
+						else  b.time
+					end planTime,a.orderId,
+					case when a.type=0 then a.onceMoney
+						else  b.money
+					end onceMoney
+					 from paymentplan_info a 
+				left join paymentsub_info b
+				on a.id=b.paymentId) a -->
+				
+				
+select money onceMoney from 
+(select sum(onceMoney) money,time,orderId,2 flag from
+			(select DATE_FORMAT(b.time,'%Y-%m') time,a.orderId,
+					b.money onceMoney
+						 from paymentplan_info a 
+					left join paymentsub_info b
+					on a.id=b.paymentId
+			where a.type=1
+) a
+	group by a.time,a.orderId
+
+	union
+
+select sum(onceMoney) money,DATE_FORMAT(a.plantime,'%Y-%m') time,orderId,1 flag
+						 from paymentplan_info a 
+	where a.type=0
+	group by time,orderId
+	)a
+where	1=1
+		and a.time=#{planTime} and a.orderId=#{orderId}  ORDER BY flag desc limit 1
+	</select>
+	
+	
+	<select id="ajhklistPage" parameterType="page"  resultType="pd">
+			select
+			a.id,
+			a.customerId,
+			c.name runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,	
+			IFNULL(a.debtAmount,'') debtAmount,
+			IFNULL(a.fixedMoney,'') fixedMoney,
+			IFNULL(a.cType,'') cType,
+			f.currentMoney money,
+			case when a.cType=0 then (
+			case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+			 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+			 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+				 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+					   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+			 end) else a.fixedMoney end commissionaMount,
+			 case when a.cType=0 then(
+			case when a.status=0 
+				 then (case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+						else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+			when a.status=3 or a.status=4 then (case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+				 else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end) 
+			else (case when a.lawCommissionRate is null then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+				 	   when a.lawCommissionRate = '' then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+					   else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end)
+				 end) else '-' end commissionRate,
+			IFNULL(date_format(f.currentTime,'%Y-%m-%d %H:%i:%s'),'') planTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+			inner join 
+			paymentdetail_info f
+		on a.id =f.orderId 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+		debtor_info e
+			on a.debtorId=e.id
+		where a.delflag=0 and f.delflag=0 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND (d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') OR e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and date_format(f.currentTime,'%Y-%m') = #{pd.createTimeStart}
+		</if>
+		<if test="pd.runnerId != null and pd.runnerId != ''"><!-- 注册时间检索 -->
+			and a.runnerId = #{pd.runnerId}
+		</if>
+		order by f.currentTime desc
+		</select>
+		
+		
+		<select id="ajhkList" parameterType="pd"  resultType="pd">
+			select
+			a.id,
+			b.name saleName,
+			c.name runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,	
+			IFNULL(a.debtAmount,'') debtAmount,
+			IFNULL(a.fixedMoney,'') fixedMoney,
+			IFNULL(a.cType,'') cType,
+			f.currentMoney money,
+			case when a.cType=0 then (
+			case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+			 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+			 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+				 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+					   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+			 end) else a.fixedMoney end commissionaMount,
+			 case when a.cType=0 then(
+			case when a.status=0 
+				 then (case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+						else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+			when a.status=3 or a.status=4 then (case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+				 else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end) 
+			else (case when a.lawCommissionRate is null then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+				 	   when a.lawCommissionRate = '' then (case when a.commissionRate is null then '' when a.commissionRate ='' then '' else CONCAT(a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/100,'%') end)
+					   else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/100,'%') end)
+				 end) else '-' end commissionRate,
+		<!-- 	f.money,
+			f.commissionaMount,
+			case when f.commissionRate is null then ''
+				 when f.commissionRate = '' then '' 
+			else CONCAT(f.commissionRate,'%') end commissionRate, -->
+			IFNULL(date_format(f.currentTime,'%Y-%m-%d %H:%i:%s'),'') planTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+			<choose>
+			<when test="flag==0">
+				left join 
+			</when>
+			<otherwise>
+				inner join
+			</otherwise>
+			</choose>
+			paymentdetail_info f
+		on a.id =f.orderId 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+		debtor_info e
+			on a.debtorId=e.id
+		where a.delflag=0 
+		<if test="flag !=0">
+			and f.delflag=0 
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			AND (d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%') OR e.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			OR c.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)
+		</if>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 注册时间检索 -->
+			and date_format(f.currentTime,'%Y-%m') = #{createTimeStart}
+		</if>
+		<if test="runnerId != null and runnerId != ''"><!-- 注册时间检索 -->
+			and a.runnerId = #{runnerId} 
+			<if test="startTime !=null and startTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>
+			<if test="endTime !=null and endTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+		</if>
+		<if test="saleId != null and saleId != ''"><!-- 注册时间检索 -->
+			and a.saleId = #{saleId}
+			<if test="startTime !=null and startTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &gt;= #{startTime}
+			</if>
+			<if test="endTime !=null and endTime !=''">
+				and date_format(a.createTime,'%Y-%m-%d') &lt;= #{endTime}
+			</if>
+		</if>
+		order by f.currentTime desc
+		</select>
+	
+	
+	<update id="doUpdate1" parameterType="pd">
+		update orderreport_info set status=#{status},content=#{content} where id=#{id}
+	</update>
+	
+	<update id="updateReportLinkman" parameterType="pd">
+		update orderreport_info set linkmanName=#{linkmanName},email=#{email} where id=#{id} 
+	</update>
+	
+	<insert id="saveCallinfo" parameterType="pd">
+		insert into call_info(userId,orderId,time,remark) values(#{userId},#{orderId},#{planTime},#{remark1});
+	</insert>
+	
+	<select id="callList" parameterType="pd" resultType="pd">
+		select IFNULL(date_format(j.time,'%Y-%m-%d %H:%i:%s'),'') time,j.id,j.flag,j.userId,j.orderId,j.customerId,
+			IFNULL(j.remark,'') remark from call_info j where j.userId=#{userId} 
+			<choose>
+				<when test="flag==1">  <!-- 获取过期提醒 -->
+					and date_format(j.time,'%Y-%m-%d %H:%i:%s') &lt;date_format(now(),'%Y-%m-%d %H:%i:%s') and j.flag=0
+					order by j.time desc
+				</when>
+				<when test="flag==2">  
+					<if test="time !=null and time !=''">
+					and date_format(j.time,'%Y-%m-%d')=#{time} and j.flag=0 	
+					</if>
+					<if test="time ==null or time ==''">
+					and date_format(j.time,'%Y-%m-%d %H:%i:%s') &gt;=date_format(now(),'%Y-%m-%d %H:%i:%s') and j.flag=0
+					</if>
+					order by j.time
+				</when>
+				<otherwise>
+					and date_format(j.time,'%Y-%m-%d %H:%i:%s') &gt;=date_format(now(),'%Y-%m-%d %H:%i:%s') and j.flag=0
+					order by j.time
+				</otherwise>
+			</choose>
+		
+	</select>
+	
+	
+		<insert id="saveLinks"  parameterType="java.util.List">
+		insert into
+			paymentSub_info
+		(
+			paymentId,
+			time,
+			money,
+			remark
+		)values
+		 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+                 (
+                 #{reddemCode.paymentId}, #{reddemCode.time},
+                 #{reddemCode.money},#{reddemCode.remark}
+               )
+            </foreach>
+	</insert>
+	
+	<update id="updatePaymentPlan" parameterType="pd">
+		<if test="id!=null and id!=''">
+			update paymentplan_info set 
+					planTime=#{planTime},
+					onceMoney=#{onceMoney},
+					remark=#{remark}
+				where id=#{id}
+		</if>
+		<if test="subId !=null and subId !=''">
+			update paymentSub_info set 
+					time=#{time},
+					money=#{money},
+					remark=#{remark}
+				where id=#{subId}
+		</if>
+	
+	</update>
+</mapper>

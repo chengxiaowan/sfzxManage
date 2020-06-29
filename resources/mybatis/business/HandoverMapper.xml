@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="HandoverMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		handover_info
+	</sql>
+
+	<!-- 合同列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			b.runnerId,
+			a.orderId,
+			a.recipientId,
+			b.debtorId,
+			b.status,
+			IFNULL(d.name,'') debtorName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(e.name,'') customerName,
+			IFNULL(b.orderNo,'') orderNo,
+			IFNULL(a.recipientName,'') recipientName,
+			IFNULL(date_format(a.handoverTime,'%Y-%m-%d'),'') handoverTime,
+			IFNULL(a.reason,'') reason,
+			b.cType,
+			b.discount,
+			b.susongdiscount,
+			b.fixedMoney,
+			case when b.lawCommissionRate is null then ''
+				 when b.lawCommissionRate = '' then '' 
+			else CONCAT(b.lawCommissionRate*(case when b.susongdiscount is null then 100
+				 when b.susongdiscount = '' then 100 else b.susongdiscount end)/100,'%') end lawCommissionRate,
+			case when b.commissionRate is null then ''
+				 when b.commissionRate = '' then '' 
+			else CONCAT(b.commissionRate*(case when b.discount is null then 100
+				 when b.discount = '' then 100 else b.discount end)/100,'%') end commissionRate,
+			b.debtAmount,
+			f.totalMoney totalMoney,
+			b.debtAmount-IFNULL(f.totalMoney,0) syMoney,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			handover_info a 
+		inner join order_info b
+			on a.orderId =b.id and b.delflag=0 
+		left join 
+			sys_user c
+			on b.runnerId =c.USER_ID 
+		left join
+			debtor_info d
+			on b.debtorId=d.id and d.delflag=0
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) f
+			on b.id= f.orderId
+		left join
+			customer_info e
+			on b.customerId=e.id and e.delflag=0
+		where a.delFlag = 0  and b.status in(3,4)
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+		<!-- 	a.contractNo LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or -->
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<insert id="save"  parameterType="pd" >
+		insert into
+			<include refid="tableName"></include>
+		(
+			orderId,
+			recipientId,
+			recipientName,
+			handoverTime,
+			reason
+		)values
+		(
+			#{orderId},
+			#{recipientId},
+			#{recipientName},
+			#{handoverTime},
+			#{remark}
+		)
+	</insert>
+	
+	
+	<insert id="save1"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			<include refid="tableName"></include>
+			<if test="status==3">
+			(
+				orderId,
+				susongstatus,
+				time,
+				remark
+			)values
+			(
+				#{orderId},
+				#{susongstatus},
+				#{time},
+				#{remark}
+			)
+			</if>
+			<if test="status==4">
+			(
+				orderId,
+				zongcstatus,
+				time,
+				remark
+			)values
+			(
+				#{orderId},
+				#{zongcstatus},
+				#{time},
+				#{remark}
+			)
+			</if>
+	</insert>
+	
+	<select id="findById" parameterType="pd" resultMap="map1">
+			select
+			a.id,
+			a.susongstatus,
+			a.zongcstatus,
+			a.orderId,
+			a.recipientId,
+			IFNULL(date_format(a.time,'%Y-%m-%d'),'') time,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			handover_info a  
+		where a.id=#{id}
+	</select>
+	
+	<resultMap type="pd" id="map1">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findAttach"></collection>
+	</resultMap>
+	
+	<select id="findAttach" parameterType="Integer"  resultType="pd">
+		select * from attach_info where type=8 and relateId=#{id}  and delflag=0
+	</select>
+	
+	
+	<update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="zongcstatus != null and zongcstatus != ''">
+					,zongcstatus = #{zongcstatus}
+				</if>
+				<if test="susongstatus != null and susongstatus != ''">
+					,susongstatus = #{susongstatus}
+				</if>
+				<if test="time != null and time != ''">
+					,time = #{time}
+				</if>
+				<if test="remark != null and remark != ''">
+					,remark = #{remark}
+				</if>
+					,reason = #{reason}
+				where id = #{id}
+	</update>
+	
+	
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<delete id="updateTask" parameterType="pd">
+		update warn_info set isCompleted=1
+		where orderId=#{orderId} and type in(5,6)
+	</delete>
+	
+	<select id="listAll" resultType="pd">
+		select * from <include refid="tableName"></include>
+	</select>
+</mapper>

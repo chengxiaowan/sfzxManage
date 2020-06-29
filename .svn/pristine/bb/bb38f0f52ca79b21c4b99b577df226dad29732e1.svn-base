@@ -1,0 +1,179 @@
+<!DOCTYPE HTML>
+<html>
+
+	<head>
+		<title></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link href="/static/ui/css/bootstrap.min.css?v=3.3.6" rel="stylesheet">
+		<link href="/static/ui/css/font-awesome.css?v=4.4.0" rel="stylesheet">
+		<link href="/static/ui/css/plugins/awesome-bootstrap-checkbox/awesome-bootstrap-checkbox.css" rel="stylesheet">
+		<link href="/static/ui/css/animate.css" rel="stylesheet">
+		<link href="/static/ui/css/style.css?v=4.1.0" rel="stylesheet">
+		<link rel="stylesheet" href="/static/ui/js/plugins/webuploader/webuploader.css">
+		<link rel="stylesheet" href="/static/ace/css/datepicker.css" />
+		<link href="/static/ui/css/htz.css" rel="stylesheet">
+		<link href="/static/ui/css/toastr.min.css" rel="stylesheet">
+	</head>
+
+	<body class="gray-bg">
+		<div class="wrapper wrapper-content hide" id="app">
+			<div class="panel panel-default">
+				<div class="panel-heading clearfix btns-hook">
+					<form role="form" class="form-inline" id="searchForm" @submit.prevent="getData(1)">
+						<div class="form-group" v-if="role=='经理'||role=='电销主管'">
+							<select style="width: 200px;" name="" id="saleId">
+								<option value="">请选择</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="">开始日期</label>
+							<input class="span10 date-picker form-control" id="startTime" name="startTime" type="text" data-date-format="yyyy-mm-dd" readonly="readonly" placeholder="开始日期" style="width: 150px;" />
+						</div>
+						<div class="form-group">
+							<label for="">结束日期</label>
+							<input class="span10 date-picker form-control" id="endTime" name="endTime" type="text" data-date-format="yyyy-mm-dd" readonly="readonly" placeholder="结束日期" style="width: 150px;" />
+						</div>
+						<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> 查询</button>
+					</form>
+				</div>
+				<div class="panel-body">
+					<table class="table table-responsive table-bordered table-hover" id="mainTable">
+						<thead>
+							<tr>
+								<th>客户名称</th>
+								<th>联系人</th>
+								<th>职务</th>
+								<th>手机号码</th>
+								<th>固定电话</th>
+								<th>邮箱</th>
+								<th>跟进状态</th>
+								<th>最新跟进记录</th>
+								<th>实际跟进时间
+
+								</th>
+
+								<th v-if="role=='经理'">
+									销售人
+								</th>
+								<th>
+									电访销售人
+								</th>
+
+								<th>成立日期</th>
+								<th>注册资本</th>
+								<th>重要程度</th>
+
+								<th>
+									客户来源
+								</th>
+							</tr>
+						</thead>
+						<tbody id="dataTable">
+							<tr v-for="(el,index) of c.list">
+								<td v-if="power!='电销'">
+									<a href="javascript:;" @click="viewCustomer(el.id)">{{el.name}}</a>
+								</td>
+								<td v-else>{{el.name}}</td>
+								<td>{{el.linkmanName}}</td>
+								<td>{{el.postion}}</td>
+								<td>
+									<span style="display: block;" v-for="(elSub,index) of el.linkmanMobilePhone.split('/')">
+										{{elSub || "&nbsp;"}}
+									</span>
+								</td>
+								<td>
+									<span style="display: block;" v-for="(elSub,index) of el.linkmanLandline.split('/')">
+										{{elSub || "&nbsp;"}}
+									</span>
+								</td>
+								<td>
+									<span style="display: block;" v-for="(elSub,index) of el.email.split('/')">
+										{{elSub || "&nbsp;"}}
+									</span>
+								</td>
+								<td v-if="el.gjStatus==0">未处理</td>
+								<td v-if="el.gjStatus==1">初步沟通</td>
+								<td v-if="el.gjStatus==2">无意向</td>
+								<td v-if="el.gjStatus==3">有意向</td>
+								<td v-if="el.gjStatus==4">销售外访</td>
+								<td v-if="el.gjStatus==5">客户来访</td>
+								<td v-if="el.gjStatus==6">需求确定</td>
+								<td v-if="el.gjStatus==7">方案/报价</td>
+								<td v-if="el.gjStatus==8">谈判/合同</td>
+								<td v-if="el.gjStatus==9">成交</td>
+								<td v-if="el.gjStatus==10">暂时搁置</td>
+								<td v-if="el.gjStatus==11">未成交</td>
+								<td v-if="el.gjStatus==12">有意向存疑</td>
+								<td v-if="el.gjStatus==13">潜在客户</td>
+								<td><span class="showTips">{{el.remark.length > 10 ? (el.remark.substring(0,10)+"...") : el.remark }} <i class="hide">{{el.remark}}</i></span></td>
+								<td>{{el.gjTime}}</td>
+
+								<td v-if="role=='经理'">{{el.lastSaleName}}</td>
+								<td>{{el.dfSaleName}}</td>
+
+								<td>{{el.clrq}}</td>
+								<td>{{el.zczb}}</td>
+
+								<td v-if="el.score == 0">
+								</td>
+								<td v-if="el.score == 1" class="star">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+								</td>
+								<td v-if="el.score == 2" class="star">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+								</td>
+								<td v-if="el.score == 3" class="star">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+									<img src="/static/ui/img/10icon/x1.png" style="width: 16px;margin-right: 5px;cursor:pointer">
+									<!--<i class="fa fa-star-o active" style="font-size: 16px;margin-right: 5px;cursor:pointer"></i>
+									<i class="fa fa-star-o active" style="font-size: 16px;margin-right: 5px;cursor:pointer"></i>
+									<i class="fa fa-star-o active" style="font-size: 16px;margin-right: 5px;cursor:pointer"></i>-->
+								</td>
+
+								<td>
+									{{el.type==0 ? "客户公海" : ""}} {{el.type==1 ? "有意向公海" : ""}} {{el.type==2 ? "手工新增" : ""}} {{el.type==3 ? "无意向公海" : ""}} {{el.type==4 ? "大客户公海" : ""}}{{el.type==6 ? "新三板公海" : ""}}{{el.type==7 ? "上市公司公海" : ""}}
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<div class="pull-left form form-inline">
+						<div class="form-group form-group-sm">
+							共 {{c.total}} 条数据,每页显示
+							<select @change="getData(1)" v-model="c.pageSize" class="form-control">
+								<option value="10">10</option>
+								<option value="20">20</option>
+								<option value="30">30</option>
+								<option value="40">40</option>
+								<option value="50">50</option>
+							</select> 条
+						</div>
+					</div>
+					<div class="pagi pull-right"></div>
+				</div>
+			</div>
+		</div>
+
+	</body>
+	<script src="/static/ui/js/jquery.min.js"></script>
+	<script src="/static/ui/js/bootstrap.min.js?v=3.3.6"></script>
+	<script src="/static/ui/js/toastr.min.js"></script>
+	<script src="/static/ui/js/hplus.js?v=4.1.0"></script>
+	<script src="/static/ui/js/plugins/metisMenu/jquery.metisMenu.js"></script>
+	<script src="/static/ui/js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+	<script src="/static/ui/js/plugins/layer/layer.min.js"></script>
+	<script src="/static/ui/js/plugins/layer/laydate/laydate.js"></script>
+	<link rel="stylesheet" href="/static/ui/js/plugins/select2-4.0.3/css/select2.min.css">
+	<script src="/static/ui/js/plugins/select2-4.0.3/js/select2.min.js"></script>
+	<script src="/static/ace/js/date-time/bootstrap-datepicker.js"></script>
+	<script src="/static/ui/js/plugins/echarts/echarts.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="/static/ui/js/vue.js"></script>
+	<script src="/static/js/include/module/module_pagination.js"></script>
+	<script src="/static/ui/js/require.min.js" data-main="/static/js/include/page/saler_customer_list"></script>
+
+	<script type="text/javascript">
+		
+	</script>
+
+</html>

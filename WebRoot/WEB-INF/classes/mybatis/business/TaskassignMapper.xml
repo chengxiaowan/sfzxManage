@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TaskassignMapper">
+
+	<!-- 指派外访的列表(全部) -->
+	<select id="visitlistPage" parameterType="page" resultType="pd">
+			select
+			a.id,
+			a.target,
+			a.visitman,
+			a.userId,
+			b.isCompleted,
+			a.mobilPhone,
+			IFNULL(a.reason,'') reason,
+			IFNULL(a.evaluatSelf,'') evaluatSelf,
+			IFNULL(a.type,'') type,
+			IFNULL(a.collaborator,'') collaborator,
+			d.name collaboratorName,
+			c.name sqName,
+			e.name aduitName,
+			IFNULL(a.yjsc,'') yjsc,
+			IFNULL(a.yjts,'') yjts,
+			IFNULL(a.kssj,'') kssj,
+			IFNULL(a.ksrq,'') ksrq,
+			IFNULL(a.yjhdwsj,'') yjhdwsj,
+			IFNULL(date_format(a.yjhdwrq,'%Y-%m-%d'),'') yjhdwrq,
+			IFNULL(a.sjhgssj,'') sjhgssj,
+			IFNULL(a.yqxg,'') yqxg,
+			IFNULL(date_format(a.sjhgsrq,'%Y-%m-%d'),'') sjhgsrq,
+			a.wcqk,
+			a.wwcyy,
+			IFNULL(a.auditStatus,'') auditStatus,
+			IFNULL(a.leaderShip,'') leaderShip,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			visit_info a
+		left join 	
+			sys_user c
+			on a.userId =c.user_id  and c.isQuit=0 <!-- 申请人(执行人) -->
+		left join 	
+			sys_user e
+			on a.auditerId =e.user_id  and e.isQuit=0<!-- 审核人 -->
+		left join 	
+			sys_user d
+			on a.collaborator =d.user_id  and d.isQuit=0 <!-- 协作人 -->
+		left join 
+			warn_info b
+			on b.relateId=a.id  and b.type=1
+		where a.delFlag = 0  and a.sqorzp=1 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.target LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.auditerId !=null and pd.auditerId!=''"><!-- 注册时间检索 -->
+			and a.auditerId=#{pd.auditerId}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	<!-- 指派案件报告的列表 -->
+	<select id="orderReportlistPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.orderId,
+			b.userId,
+			a.aduiterId,
+			b.isCompleted,
+			IFNULL(c.`NAME`,'') userName,
+			IFNULL(e.userName,'') aduiterName,
+			IFNULL(a.title,'') title,
+			IFNULL(a.remark,'') remark,
+			IFNULL(d.orderNo,'') orderNo,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			orderreport_info a
+		inner join
+			order_info d
+			on a.orderId=d.id and d.delflag=0
+		inner join 
+			warn_info b
+			on b.relateId=a.id and b.delflag=0 and b.type=1
+		left join 
+			sys_user c
+			on b.userId=c.user_id 
+		left join 
+			sys_user e
+			on a.aduiterId=e.user_id 
+		where a.delFlag = 0  and  a.aduiterId is not null  and  a.aduiterId &lt;&gt; '' 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.contractNo LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.marks==2"><!-- 注册时间检索 -->
+			and b.userId in(select userId from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe') and a.aduiterId=#{pd.aduiterId}
+		</if>
+	<!-- 	<if test="pd.marks==3">注册时间检索
+			and a.userId in(select userId from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.aduiterId=#{pd.aduiterId}
+		</if> -->
+		<if test="pd.isCompleted != null and pd.isCompleted != ''"><!-- 注册时间检索 -->
+			and b.isCompleted &gt;= #{pd.isCompleted}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	
+	<!-- 欠款催收的列表 -->
+	<select id="debtRoportlistPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.orderId,
+			b.userId,
+			a.aduiterId,
+			b.isCompleted,
+			IFNULL(c.`NAME`,'') userName,
+			IFNULL(e.userName,'') aduiterName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(d.orderNo,'') orderNo,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			debturgereport_info a
+		inner join
+			order_info d
+			on a.orderId=d.id and d.delflag=0
+		inner join 
+			warn_info b
+			on b.relateId=a.id and b.delflag=0 and b.type=2
+		left join 
+			sys_user c
+			on b.userId=c.user_id 
+		left join 
+			sys_user e
+			on a.aduiterId=e.user_id 
+		where a.delFlag = 0  and  a.aduiterId is not null  and  a.aduiterId &lt;&gt; '' 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.contractNo LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.marks==2"><!-- 注册时间检索 -->
+			and b.userId in(select userId from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe') and a.aduiterId=#{pd.aduiterId}
+		</if>
+		<if test="pd.isCompleted != null and pd.isCompleted != ''"><!-- 注册时间检索 -->
+			and b.isCompleted &gt;= #{pd.isCompleted}
+		</if>
+		<!-- <if test="pd.marks==3">注册时间检索
+			and a.userId in(select userId from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.aduiterId=#{pd.aduiterId}
+		</if> -->
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<!-- 发送律师函的列表 -->
+	<select id="lawerslistPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.orderId,
+			b.userId,
+			a.aduiterId,
+			IFNULL(c.`NAME`,'') userName,
+			IFNULL(e.userName,'') aduiterName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(d.orderNo,'') orderNo,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			lawyer_info a
+		inner join
+			order_info d
+			on a.orderId=d.id and d.delflag=0
+		inner join 
+			warn_info b
+			on b.relateId=a.id and b.delflag=0 and b.type=3
+		left join 
+			sys_user c
+			on b.userId=c.user_id 
+		left join 
+			sys_user e
+			on a.aduiterId=e.user_id 
+		where a.delFlag = 0  and  a.aduiterId is not null  and  a.aduiterId &lt;&gt; '' 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.contractNo LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.marks==2"><!-- 注册时间检索 -->
+			and b.userId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe') and a.aduiterId=#{pd.aduiterId}
+		</if>
+		<!-- <if test="pd.marks==3">注册时间检索
+			and a.userId in(select userId from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') and a.aduiterId=#{pd.aduiterId}
+		</if> -->
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	<!-- 新增指派外访任务 -->
+	<insert id="saveVisit"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			visit_info
+		(
+			auditerId,
+			userId,
+			reason,
+			sqorzp
+		)values
+		(
+			#{auditerId},
+			#{userId},
+			#{reason},
+			1
+		)
+	</insert>
+	
+	
+	<update id="update" parameterType="pd">
+		update
+			visit_info
+			set
+			auditerId=#{auditerId},
+			userId=#{userId},
+			reason=#{reason}
+		where id=#{id}	
+	
+	</update>
+	
+	
+	<!-- 新增案件报告 -->
+	<insert id="saveOrderReport"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			orderreport_info
+		(
+			orderId,
+			aduiterId
+		)values
+		(
+			#{orderId},
+			#{aduiterId}
+		)
+	</insert>
+	
+	<insert id="saveDebt"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			debturgereport_info
+		(
+			orderId,
+			aduiterId
+		)values
+		(
+			#{orderId},
+			#{aduiterId}
+		)
+	</insert>
+	
+	
+	<insert id="saveLawyer"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			lawyer_info
+		(
+			orderId,
+			userId,
+			aduiterId
+		)values
+		(
+			#{orderId},
+			#{userId},
+			#{aduiterId}
+		)
+	</insert>
+	
+	<insert id="saveTasks" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+				insert into
+					warn_info
+				(
+					relateId,
+					userId,
+					type,
+					doId
+				)values
+				(
+					
+					#{id},
+					#{auditerId},
+					#{type},
+					#{userId}
+				)
+	</insert>
+	
+	
+	
+	<update id="updateTasks" parameterType="pd">
+				update
+					warn_info
+				set
+					userId=#{auditerId},
+					doId=#{userId}
+				where relateId=#{id} and type=#{type} 
+	</update>
+	
+	<select id="findTasks" parameterType="pd" resultType="pd">
+		select * from warn_info where relateId=#{id} and type=#{type} 
+	</select>
+	
+	
+	<delete id="deleteTasks" parameterType="pd">
+		delete from warn_info where relateId=#{id} and type=#{type} 
+	</delete>
+	
+</mapper>

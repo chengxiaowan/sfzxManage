@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ContractMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		contract_info
+	</sql>
+
+	<!-- 合同列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+	select
+			a.id,
+			a.userId,
+			a.customerId,
+			e.name swwxName,
+			IFNULL(a.contractNo,'') contractNo,
+			<!-- IFNULL(d.debtorName, -->a.debtorName<!-- ) --> debtorName,
+			<!-- IFNULL(d.custoemrName, -->c.name<!-- ) --> customerName,
+			<!-- IFNULL(d.debtAmount, -->a.price<!-- ) --> price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			<!-- d.cType,
+			d.discount,
+			d.susongdiscount,
+			d.fixedMoney,
+			d.lawCommissionRate,
+			d.commissionRate, -->
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join 
+			sys_user e
+			on a.swwxId=e.user_id
+		<!-- left join 
+			(select
+			a.id,
+			a.contractId,
+			d.id customerId,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.debtAmount,'') debtAmount,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		where a.delflag=0 
+			) d
+			on a.id=d.contractId  -->
+		where a.delFlag = 0  and a.type=0
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.signingTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.signingTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.userId != null and pd.userId  != ''"><!-- 注册时间检索 -->
+			and a.userId = #{pd.userId}
+		</if>
+		<if test="pd.swwxId != null and pd.swwxId != ''"><!-- 注册时间检索 -->
+			and a.swwxId = #{pd.swwxId}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<select id="sslistPage" parameterType="page" resultType="pd">
+	select
+			a.id,
+			a.userId,
+			a.customerId,
+			i.name swwxName,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(e.name,debtorName) debtorName,
+			IFNULL(d.custoemrName,c.name) customerName,
+			IFNULL(d.debtAmount,a.price) price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			d.cType,
+			d.discount,
+			d.susongdiscount,
+			d.fixedMoney,
+			d.lawCommissionRate,
+			d.commissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join
+			debtor_info e
+			on e.id=a.debtorId	
+		left join 
+			sys_user i
+			on a.swwxId=i.user_id
+		left join 
+			(select
+			a.id,
+			a.contractId,
+			d.id customerId,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(a.debtAmount,'') debtAmount,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		where a.delflag=0 
+			) d
+			on a.id=d.contractId 
+		where a.delFlag = 0  and a.type=1
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.signingTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.signingTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.userId != null and pd.userId  != ''"><!-- 注册时间检索 -->
+			and a.userId = #{pd.userId}
+		</if>
+		<if test="pd.swwxId != null and pd.swwxId != ''"><!-- 注册时间检索 -->
+			and a.swwxId = #{pd.swwxId}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<select id="showAllContract" parameterType="pd" resultType="pd">
+	
+	select * from(
+	select
+			a.id,
+			a.userId,
+			a.type,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			a.debtorName debtorName,
+			c.name customerName,
+			a.price price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		
+		where a.delFlag = 0  and a.type=0
+		<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+			and a.signingTime &gt;= #{startTime}
+		</if>
+		<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+			and a.signingTime &lt;= #{endTime}
+		</if>
+		<if test="userId != null and userId != ''"><!-- 注册时间检索 -->
+			and a.userId = #{userId}
+		</if>
+			union all
+		select
+			a.id,
+			a.userId,
+			a.type,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(e.name,debtorName) debtorName,
+			IFNULL(d.custoemrName,c.name) customerName,
+			IFNULL(d.debtAmount,a.price) price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join
+			debtor_info e
+			on e.id=a.debtorId			
+		left join 
+			(select
+			a.id,
+			a.contractId,
+			d.id customerId,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(a.debtAmount,'') debtAmount,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		where a.delflag=0 
+			) d
+			on a.id=d.contractId 
+		where a.delFlag = 0  and a.type=1 and a.fszss=0
+		<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+			and a.signingTime &gt;= #{startTime}
+		</if>
+		<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+			and a.signingTime &lt;= #{endTime}
+		</if>
+		<if test="userId != null and userId != ''"><!-- 注册时间检索 -->
+			and a.userId= #{userId}
+		</if>
+		) a
+	</select>
+	
+	
+	
+	<select id="showlistPage" parameterType="page" resultType="pd">
+	select
+			a.id,
+			a.userId,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(a.debtorName,'') debtorName,
+			IFNULL(c.name,'') customerName,
+			IFNULL(a.price,'') price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		where a.delFlag = 0  
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.debtorName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.contractNo LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.id != null and pd.id != ''"><!-- 关键词检索 -->
+			and c.id=#{pd.id}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.signingTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.signingTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<insert id="save"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			<include refid="tableName"></include>
+		(
+			customerId,
+			userId,
+			debtorId,
+			swwxId,
+			debtorName,
+			contractNo,
+			price,
+			signingTime,
+			endTime,
+			address,
+			commissionRate,
+			type,
+			fszss,
+			remark
+		)values
+		(
+			#{customerId},
+			#{userId},
+			#{debtorId},
+			#{swwxId},
+			#{debtorName},
+			#{contractNo},
+			#{price},
+			#{signingTime},
+			#{endTime},
+			#{address},
+			#{commissionRate},
+			#{type},
+			#{fszss},
+			#{remark}
+		)
+	</insert>
+	
+	<!-- 批量插入附件 (但参数list传递  collection必为list)-->
+	<insert id="saveAttach"  parameterType="java.util.List">
+		insert into
+			attach_info
+		(
+			relateId,
+			realPath,
+			originalFilename,
+			fileSize,
+			url,
+			uploadTime,
+			uploader
+		)values
+		 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+                 (
+                 #{reddemCode.contractId}, #{reddemCode.realPath},
+                 #{reddemCode.originalFilename},
+              	 #{reddemCode.fileSize},
+                 #{reddemCode.url}, #{reddemCode.uploadTime},
+                 #{reddemCode.uploader}
+               )
+            </foreach>
+	</insert>
+	
+	
+	<select id="findById" parameterType="pd" resultMap="maps">
+		select
+			a.id,
+			a.userId,
+			a.customerId,
+			a.type,
+			a.swwxId,
+			e.name swwxName,
+			IFNULL(a.price,'') price,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(a.debtorName,'') debtorName,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(c.name,'') customerName,
+			IFNULL(a.address,'') address,
+			IFNULL(a.commissionRate,'') commissionRate,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join 
+			sys_user e
+			on a.swwxId=e.user_id
+		left join 	
+			customer_info c
+			on a.customerId =c.id  and c.delflag=0
+		where a.delFlag = 0  and a.id=#{id}
+	</select>
+	
+	
+	
+	<select id="findById1" parameterType="pd" resultMap="maps">
+		select
+			a.id,
+			a.userId,
+			a.customerId,
+			a.type,
+			a.debtorId,
+			a.swwxId,
+			e.name swwxName,
+			IFNULL(a.price,'') price,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(d.name,debtorName) debtorName,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(c.name,'') customerName,
+			IFNULL(a.address,'') address,
+			IFNULL(a.commissionRate,'') commissionRate,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join 
+			sys_user e
+			on a.swwxId=e.user_id
+		left join 	
+			customer_info c
+			on a.customerId =c.id  and c.delflag=0
+		left join
+			debtor_info d
+			on a.debtorId=d.id and d.delflag=0
+		where a.delFlag = 0  and a.id=#{id}
+	</select>
+	
+	
+	<resultMap type="pd" id="maps">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findAttach"></collection>
+		<collection property="logs" column="id" select="findlogs"></collection>
+	</resultMap>
+	
+	<select id="findAttach" parameterType="Integer"  resultType="pd">
+		SELECT
+			a.id,
+			a.realPath,
+			a.originalFilename,
+			a.fileSize,
+			a.url,
+			IFNULL(date_format(a.uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+			uploader,
+			case when b.type=0 then '非诉讼合同'
+				 else '诉讼合同'
+				 end type,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			FROM attach_info a 
+			inner join
+			contract_info b
+			on a.type=0 and a.relateId=b.id 
+			WHERE a.delFlag = 0 and a.relateId=#{id} 
+	</select>
+	
+	<select id="findlogs" parameterType="Integer"  resultType="pd">
+		select a.userId,a.type,a.qzdz,a.hzdz,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,b.name name from log_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where a.saleCustomerId=#{id}  and a.flag=1
+	</select>
+	
+	<insert id="saveAttach1"  parameterType="pd">
+	insert into
+		attach_info
+	(
+		relateId,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		uploadTime,
+		uploader
+	)values
+	(
+		#{relateId},
+		#{realPath},
+		#{originalFilename},
+		#{fileSize},
+		#{url},
+		#{uploadTime},
+		#{uploader}
+	)
+	</insert>
+	
+	<delete id="deleteAttach" parameterType="list">
+		delete from attach_info where id in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	
+	<!-- <update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="userId != null and userId != ''">
+					,userId = #{userId}
+				</if>
+				<if test="customerId != null and customerId != ''">
+					,customerId = #{customerId}
+				</if>
+				<if test="debtorId != null and debtorId != ''">
+					,debtorId = #{debtorId}
+				</if>
+				<if test="contractNo != null and contractNo != ''">
+					,contractNo = #{contractNo}
+				</if>
+				<if test="debtorName != null and debtorName != ''">
+					,debtorName = #{debtorName}
+				</if>
+				<if test="endTime != null and endTime != ''">
+					,endTime = #{endTime}
+				</if>
+					,price = #{price} 
+				<if test="signingTime != null and signingTime != ''">
+					,signingTime = #{signingTime}
+				</if>
+				<if test="address != null and address != ''">
+					,address = #{address}
+				</if>
+					,commissionRate = #{commissionRate}
+					,remark = #{remark} 
+				where id = #{id}
+	</update> -->
+	
+	
+	<update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="userId != null and userId != ''">
+					,userId = #{userId}
+				</if>
+				<if test="customerId != null and customerId != ''">
+					,customerId = #{customerId}
+				</if>
+				<if test="swwxId != null and swwxId != ''">
+					,swwxId = #{swwxId}
+				</if>
+				<if test="debtorId != null and debtorId != ''">
+					,debtorId = #{debtorId}
+				</if>
+				<if test="contractNo != null and contractNo != ''">
+					,contractNo = #{contractNo}
+				</if>
+				<if test="debtorName != null and debtorName != ''">
+					,debtorName = #{debtorName}
+				</if>
+				<if test="endTime != null and endTime != ''">
+					,endTime = #{endTime}
+				</if>
+				<if test="price != null and price != ''">
+					,price = #{price} 
+				</if>
+				<if test="signingTime != null and signingTime != ''">
+					,signingTime = #{signingTime}
+				</if>
+				<if test="address != null and address != ''">
+					,address = #{address}
+				</if>
+				<if test="commissionRate != null and commissionRate != ''">
+					,commissionRate = #{commissionRate} 
+				</if>
+				<if test="remark != null and remark != ''">
+					,remark = #{remark} 
+				</if>
+				<if test="fszss != null and fszss != ''">
+					,fszss = #{fszss} 
+				</if>
+				where id = #{id}
+	</update>
+	
+	
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			IFNULL(a.contractNo,'') contractNo,
+			a.userId saleId
+		from
+			contract_info a  where 1=1
+		<if test="key!=null and key!=''">
+			and a.contractNo LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+	</select>
+	
+	<select id="getDebtorInfo" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.name
+		from
+			debtor_info a  where 1=1
+		<if test="customerId !=null and customerId!=''">
+			and a.id in(select
+			e.id
+		from
+			order_info a 
+		inner join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		inner join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		where a.delflag=0 and d.id=#{customerId})
+		</if>
+		<if test="key!=null and key!=''">
+			and a.name LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+	</select>
+	
+	<update id="updateCustomerSaleId" parameterType="pd">
+		update customer_info set contractSaleId=#{userId} where id=#{customerId} and delflag=0
+	</update>
+	
+	<select id="findOrderInfoByContractId" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(k.signingTime,'%Y-%m-%d %H:%i:%s'),'') signingTime,
+			IFNULL(date_format(k.endTime,'%Y-%m-%d %H:%i:%s'),'') endTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		inner JOIN
+			contract_info k
+		 on k.id=a.contractId
+		where a.delFlag = 0  and k.id= #{id} 
+	</select>
+</mapper>

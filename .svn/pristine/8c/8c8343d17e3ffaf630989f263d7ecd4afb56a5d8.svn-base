@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="LawsuitauditMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		lawsuitapply_info
+	</sql>
+
+	<!-- 合同列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		SELECT
+		l.id,
+		l.orderId,
+		u.`NAME` applyer,
+		a.orderNo orderNo,
+		a.cType,
+		a.discount,
+		a.susongdiscount,
+		a.fixedMoney,
+		case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+		IFNULL(d.name,'') custoemrName,
+		IFNULL(e.name,'') debtorName,
+		IFNULL(a.debtAmount,'') debtAmount,
+		h.totalMoney totalMoney,
+		a.debtAmount-h.totalMoney syMoney,
+		case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+		l.applyType,
+		CASE l.auditStatus
+		WHEN 0 THEN
+		'待审核'
+		WHEN 1 THEN
+		'已审核'
+		WHEN 2 THEN
+		'审核未通过'
+		ELSE
+		'未知'
+		END auditStatus,
+		u1.`NAME` auditer,
+		IFNULL(date_format(l.auditTime,'%Y-%m-%d %H:%i:%s'),'') auditTime,
+		IFNULL(l.auditIdea, '') auditIdea,
+		IFNULL(date_format(l.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(l.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM `lawsuitapply_info` l
+		inner join order_info a on a.id=l.orderId 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+			debtor_info e
+			on a.debtorId=e.id
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		LEFT JOIN sys_user u ON l.applyerId = u.USER_ID
+		LEFT JOIN sys_user u1 ON l.auditerId = u1.USER_ID
+		WHERE l.delFlag = 0 and a.delflag=0 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			u.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.flags==0"><!-- 注册时间检索 -->
+			and l.applyerId in (select user_Id from sys_user where role_id in ('02178e62f17b4926bb7014f3ad5a1ebe','45efba0a0fa946aebf7befe614c74e55'))
+		</if>
+		<if test="pd.auditStatus!=null and pd.auditStatus!=''"><!-- 注册时间检索 -->
+			and l.auditStatus = #{pd.auditStatus}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and l.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and l.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by l.id desc
+	</select>
+	
+	<select id="findById" parameterType="pd" resultType="pd">
+	SELECT
+		l.id,
+		l.orderId,
+		u.`NAME` applyer,
+		l.applyerId userId,
+		a.custoemrName custoemrName,
+		a.debtorName debtorName,
+		applyType,
+		IFNULL(l.remark, '') remark,
+		l.auditStatus,
+		u1.`NAME` auditer,
+		IFNULL(date_format(l.auditTime,'%Y-%m-%d %H:%i:%s'),'') auditTime,
+		IFNULL(l.auditIdea, '') auditIdea,
+		IFNULL(date_format(l.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(l.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM `lawsuitapply_info` l
+		LEFT JOIN sys_user u ON l.applyerId = u.USER_ID
+		LEFT JOIN sys_user u1 ON l.auditerId = u1.USER_ID
+		left join (
+		select
+			a.id,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName
+		from
+			order_info a 
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+			debtor_info e
+			on a.debtorId=e.id
+		where a.delFlag = 0 ) a on a.id=l.orderId 
+		WHERE
+		l.delFlag = 0 AND l.id = #{id}
+		</select>
+		
+		<update id="update" parameterType="pd">
+			update lawsuitapply_info
+				set editTime = #{editTime},
+					auditTime= current_timestamp(),
+					auditIdea=#{auditIdea},
+					auditStatus=#{auditStatus},
+					auditerId=#{auditerId}
+				where id=#{id}	
+		</update>
+		
+		<insert id="saveTask" parameterType="pd">
+				insert into
+					warn_info
+				(
+					relateId,
+					title,
+					orderId,
+					userId,
+					type
+				)values
+				(
+					#{id},
+					#{title},
+					#{orderId},
+					#{userId},
+					#{type}
+				)
+		</insert>
+		
+		
+		<update id="updateOrder" parameterType="pd">
+			update order_info set status=#{status},runnerId=#{recipientId},runTime=#{editTime} where id =#{orderId} 
+		</update>
+</mapper>

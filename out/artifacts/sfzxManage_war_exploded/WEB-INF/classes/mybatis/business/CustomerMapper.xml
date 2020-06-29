@@ -1,0 +1,1950 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CustomerMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		customer_info
+	</sql>
+	<!-- 字段 -->
+	<sql id="Field">
+		id,
+		IFNULL(provinceName,'') provinceName,
+		IFNULL(cityName,'') cityName,
+		IFNULL(mobilePhone,'') mobilePhone,
+		IFNULL(companyAddress,'') companyAddress,
+		IFNULL(name,'') name,
+		IFNULL(bankAccountName,'') bankAccountName,
+		IFNULL(bankName,'') bankName,
+		IFNULL(bankNumber,'') bankNumber,
+		IFNULL(taxIdentificationNumber,'') taxIdentificationNumber,
+		IFNULL(email,'') email,
+		IFNULL(fax,'') fax,
+		IFNULL(status,'') status,
+		IFNULL(otherContract,'') otherContract,
+		IFNULL(postCode,'') postCode,
+		IFNULL(remark,'') remark,
+		IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		<!-- IFNULL(delFlag,'') delFlag -->
+	</sql>
+
+	<sql id="insertField">
+		provinceName,
+		cityName,
+		companyAddress,
+		name,
+		orderSaleId,
+		contractSaleId,
+		bankName,
+		bankNumber,
+		taxIdentificationNumber,
+		email,
+		fax,
+		postCode,
+		remark
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{provinceName},
+		#{cityName},
+		#{companyAddress},
+		#{name},
+		#{orderSaleId},
+		#{contractSaleId},
+		#{bankName},
+		#{bankNumber},
+		#{taxIdentificationNumber},
+		#{email},
+		#{fax},
+		#{postCode},
+		#{remark}
+	</sql>
+
+	<!-- 用户列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.contractSaleId,
+			a.orderSaleId,
+			IFNULL(a.provinceName,'') provinceName,
+			IFNULL(a.cityName,'') cityName,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.companyAddress,'') companyAddress,
+			IFNULL(a.name,'') name,
+			IFNULL(b.name,'') contractSaleName,
+			IFNULL(c.name,'') orderSaleName,
+			IFNULL(a.bankAccountName,'') bankAccountName,
+			IFNULL(a.bankName,'') bankName,
+			IFNULL(a.bankNumber,'') bankNumber,
+			IFNULL(a.taxIdentificationNumber,'') taxIdentificationNumber,
+			IFNULL(a.email,'') email,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.status,'') status,
+			IFNULL(a.otherContract,'') otherContract,
+			IFNULL(a.postCode,'') postCode,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		<include refid="tableName"></include> a 
+			<!-- left join 
+				(select a.*,case b.isQuit when 1 and b.name is not null then '深孚征信'  else b.name end contractSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) b
+			on a.id = b.id 
+			left join 
+				(select a.*,b.name orderSaleName from customer_info a left join sys_user b on a.contractSaleId=b.user_id where a.delflag=0) c
+			on a.id = c.id  -->
+			left join 
+				sys_user b
+			on a.contractSaleId=b.user_id
+			left join 
+				sys_user c
+			on a.orderSaleId=c.user_id
+			where a.delFlag = 0
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.provinceName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.cityName LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.saleId !=null and pd.saleId != ''">
+			and (a.contractSaleId = #{pd.saleId}
+			or a.orderSaleId = #{pd.saleId})
+		</if>
+		<if test="pd.saleIds !=null and pd.saleIds != ''">
+			and a.orderSaleId = #{pd.saleIds}
+		</if>
+		<if test="pd.provinceName !=null and pd.provinceName != ''">
+			and a.provinceName = #{pd.provinceName}
+		</if>
+		<if test="pd.cityName !=null and pd.cityName != ''">
+			and a.cityName = #{pd.cityName}
+		</if>
+		order by a.id desc
+	</select>
+
+	<!-- 通过ID获取信息 -->
+	<select id="findById" parameterType="pd" resultMap="maps">
+		<if test="id != null and id > 0">
+		select
+			a.id,
+			a.contractSaleId contractSaleId,
+			a.orderSaleId orderSaleId,
+			f.id cityId,
+			IFNULL(a.provinceName,'') provinceName,
+			IFNULL(a.cityName,'') cityName,
+			IFNULL(a.mobilePhone,'') mobilePhone,
+			IFNULL(a.companyAddress,'') companyAddress,
+			IFNULL(a.name,'') name,
+			IFNULL(b.name,'') contractSaleName,
+			IFNULL(c.name,'') orderSaleName,
+			IFNULL(a.bankAccountName,'') bankAccountName,
+			IFNULL(a.bankName,'') bankName,
+			IFNULL(a.bankNumber,'') bankNumber,
+			IFNULL(a.taxIdentificationNumber,'') taxIdentificationNumber,
+			IFNULL(a.email,'') email,
+			IFNULL(a.fax,'') fax,
+			IFNULL(a.status,'') status,
+			IFNULL(a.otherContract,'') otherContract,
+			IFNULL(a.postCode,'') postCode,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		<include refid="tableName"></include> a 
+			left join 
+				sys_user b
+			on a.contractSaleId=b.user_id
+			left join 
+				sys_user c
+			on a.orderSaleId=c.user_id
+			left join 
+			region_info f
+			on f.regionName=a.cityName and f.parentId = (select a.id from region_info a,customer_info b where a.regionName=b.provinceName and b.id=#{id})
+			where a.id = #{id}
+		</if>
+	</select>
+	
+	<resultMap type="pd" id="maps">
+		<id column="id" property="id"/>
+		<collection property="linkmans" column="id" select="findLinkmans"></collection>
+		<collection property="attachs" column="id" select="findAttachs"></collection>
+		<collection property="contracts" column="id" select="findContracts"></collection>
+		<collection property="orders" column="id" select="findOrders"></collection>
+		<collection property="logs" column="id" select="findlogs"></collection>
+	</resultMap>
+	
+	<select id="findProcess" parameterType="pd" resultMap="maps11">
+ 		select id,type,IFNULL(date_format(nextTime,'%Y-%m-%d %H:%i:%s'),'') nextTime,IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,content,linkmanName from swgwprocess_info where customerId=#{id} order by createTime desc
+ 	</select>
+ 	
+ 	<select id="findSalecustomerIdById" parameterType="pd" resultType="pd">
+ 		select id from saleCustomer_info where delflag=0 and isZy=1 and iskhGh=2 and name in(select name from customer_info where id=#{id})
+ 	</select>
+	
+	
+	<resultMap type="pd" id="maps11">
+ 			<id property="id" column="id"/>
+ 			<collection property="warnMans" column="id" select="selectWarnMan1"></collection>
+ 			<collection property="attachs" column="id" select="selectAttach1"></collection>
+ 	</resultMap>
+ 	
+ 	<select id="selectWarnMan1" parameterType="Integer" resultType="pd">
+ 		select b.user_id id,b.name userName from saleprocess_about_info a,sys_user b where a.relateId=b.user_Id and a.processId=#{id}  and a.type=2
+ 	</select>
+ 	
+ 	
+ 	<select id="selectAttach1" parameterType="Integer" resultType="pd">
+ 		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=16 order by id desc
+ 	</select>
+ 	
+	<select id="findAttachs" parameterType="Integer" resultType="pd">
+			SELECT
+		a.id,
+		a.realPath,
+		a.originalFilename,
+		a.fileSize,
+		a.url,
+		IFNULL(date_format(a.uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+		uploader,
+		case when b.type=0 then '非诉讼合同'
+			 else '诉讼合同'
+			 end type,
+		IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM attach_info a 
+		inner join
+		contract_info b
+		on a.type=0 and a.relateId=b.id and b.customerId=#{id}
+		WHERE a.delFlag = 0 order by id desc
+	</select>
+	
+	<select id="findLinkmans" parameterType="Integer" resultType="pd">
+		select * from linkman_info where relateId= #{id} and delflag=0 and type=0 
+	</select>
+	
+	<select id="findContracts" parameterType="Integer" resultType="pd">
+			select * from(
+	select
+			a.id,
+			i.name swwxName,
+			a.userId,
+			a.type,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			a.debtorName debtorName,
+			c.name customerName,
+			a.price price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join 
+			sys_user i
+			on a.swwxId=i.user_id
+		where a.delFlag = 0  and a.type=0 and a.customerId=#{id}
+			union all
+		select
+			a.id,
+			i.name swwxName,
+			a.userId,
+			a.type,
+			a.customerId,
+			IFNULL(a.contractNo,'') contractNo,
+			IFNULL(e.name,debtorName) debtorName,
+			IFNULL(d.custoemrName,c.name) customerName,
+			IFNULL(d.debtAmount,a.price) price,
+			IFNULL(a.address,'') address,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end contractCommissionRate,
+			IFNULL(date_format(a.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(a.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(b.name,'') userName,
+			IFNULL(a.remark,'') remark,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			contract_info a 
+		inner join 	
+			customer_info c
+			on a.customerId =c.id
+		left join 
+			sys_user i
+			on a.swwxId=i.user_id
+		left join 
+			sys_user b
+			on a.userId=b.USER_ID
+		left join
+			debtor_info e
+			on e.id=a.debtorId			
+		left join 
+			(select
+			a.id,
+			a.contractId,
+			d.id customerId,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(a.debtAmount,'') debtAmount,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate,'%') end lawCommissionRate,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate,'%') end commissionRate 
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		where a.delflag=0 
+			) d
+			on a.id=d.contractId 
+		where a.delFlag = 0  and a.type=1 and a.customerId=#{id}
+		) a
+	</select>
+	
+	<select id="findOrders" parameterType="Integer" resultType="pd">
+			select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(k.signingTime,'%Y-%m-%d %H:%i:%s'),'') signingTime,
+			IFNULL(date_format(k.endTime,'%Y-%m-%d %H:%i:%s'),'') endTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left JOIN
+			contract_info k
+		 on k.id=a.contractId
+		where a.delFlag = 0 and a.customerId=#{id}
+	</select>
+	
+	
+	<select id="findlogs" parameterType="Integer"  resultType="pd">
+		select a.userId,a.type,a.qzdz,a.hzdz,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,b.name name from log_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where a.saleCustomerId=#{id}  and a.flag=2
+	</select>
+
+	<!-- 检查是否有重复数据 -->
+	<select id="findByMobilePhone" parameterType="pd" resultType="pd">
+		<if test="mobilePhone != null and mobilePhone != ''">
+			select
+			<include refid="Field"></include>
+			from
+			<include refid="tableName"></include>
+			where delflag=0 and mobilePhone = #{mobilePhone}
+			<if test="id != null and id > 0">
+				and id &lt;&gt; #{id}
+			</if>
+			limit 1
+		</if>
+	</select>
+
+	<!-- 通过邮箱地址获取数据 -->
+	<select id="findByName" parameterType="pd" resultType="pd">
+			select
+			<include refid="Field"></include>
+			from
+			<include refid="tableName"></include>
+			where delflag=0 and name = #{name}
+			<if test="id != null and id > 0">
+				and id &lt;&gt; #{id}
+			</if>
+			limit 1
+	</select>
+
+	<!-- 新增用户 -->
+	<!-- <insert id="saveOrUpdate" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		<choose>
+			<when test="id != null and id > 0">
+				update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="mobilePhone != null and mobilePhone != ''">
+					,mobilePhone = #{mobilePhone}
+				</if>
+				<if test="provinceName != null and provinceName != ''">
+					,provinceName = #{provinceName}
+				</if>
+				<if test="cityName != null and cityName != ''">
+					,cityName = #{cityName}
+				</if>
+					,contractSaleId = #{contractSaleId}
+					,orderSaleId = #{orderSaleId}
+				<if test="companyAddress != null and companyAddress != ''">
+					,companyAddress = #{companyAddress}
+				</if>
+				<if test="name != null and name != ''">
+					,name = #{name}
+				</if>
+					,bankName = #{bankName}
+				<if test="bankAccountName != null and bankAccountName != ''">
+					,bankAccountName = #{bankAccountName}
+				</if>
+				<if test="status != null and status != ''">
+					,status = #{status}
+				</if>
+				<if test="bankNumber != null and bankNumber != ''">
+					,bankNumber = #{bankNumber}
+				</if>
+				<if test="taxIdentificationNumber != null and taxIdentificationNumber != ''">
+					,taxIdentificationNumber = #{taxIdentificationNumber}
+				</if>
+				<if test="fax != null and fax != ''">
+					,email = #{email}
+					,fax = #{fax}
+				</if>
+				<if test="postCode != null and postCode != ''">
+					,postCode = #{postCode}
+				</if>
+				<if test="remark != null and remark != ''">
+					,remark = #{remark}
+				</if>
+				where id = #{id}
+			</when>
+			<otherwise>
+				insert into
+				<include refid="tableName"></include>
+				(
+				<include refid="insertField"></include>
+				) values (
+				<include refid="FieldValue"></include>
+				)
+			</otherwise>
+		</choose>
+	</insert> -->
+	
+	
+	
+	<insert id="saveOrUpdate" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		<choose>
+			<when test="id != null and id > 0">
+				update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="mobilePhone != null and mobilePhone != ''">
+					,mobilePhone = #{mobilePhone}
+				</if>
+				<if test="province != null and province != ''">
+					,provinceName = #{province}
+				</if>
+				<if test="cityName != null and cityName != ''">
+					,cityName = #{cityName}
+				</if>
+				<if test="contractSaleId != null and contractSaleId != ''">
+					,contractSaleId = #{contractSaleId}
+				</if>
+				<if test="orderSaleId != null and orderSaleId != ''">
+					,orderSaleId = #{orderSaleId}
+				</if>
+				<if test="companyAddress != null and companyAddress != ''">
+					,companyAddress = #{companyAddress}
+				</if>
+				<if test="name != null and name != ''">
+					,name = #{name}
+				</if>
+				<if test="bankName != null and bankName != ''">
+					,bankName = #{bankName}
+				</if>
+				<if test="bankAccountName != null and bankAccountName != ''">
+					,bankAccountName = #{bankAccountName}
+				</if>
+				<if test="status != null and status != ''">
+					,status = #{status}
+				</if>
+				<if test="bankNumber != null and bankNumber != ''">
+					,bankNumber = #{bankNumber}
+				</if>
+				<if test="taxIdentificationNumber != null and taxIdentificationNumber != ''">
+					,taxIdentificationNumber = #{taxIdentificationNumber}
+				</if>
+				<if test="fax != null and fax != ''">
+					,fax = #{fax}
+				</if>
+				<if test="email != null and email != ''">
+					,email = #{email}
+				</if>
+				<if test="postCode != null and postCode != ''">
+					,postCode = #{postCode}
+				</if>
+				<if test="remark != null and remark != ''">
+					,remark = #{remark}
+				</if>
+				where id = #{id}
+			</when>
+			<otherwise>
+				insert into
+				<include refid="tableName"></include>
+				(
+				<include refid="insertField"></include>
+				) values (
+				<include refid="FieldValue"></include>
+				)
+			</otherwise>
+		</choose>
+	</insert>
+
+	<!-- 批量删除用户 -->
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	
+	<delete id="deletes" parameterType="String">
+		update
+		saleCustomer_info
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+
+	<select id="findByIds" parameterType="String" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+
+	<!-- 删除图片 -->
+	<update id="delTp" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		headImg = ''
+		where id = #{id}
+	</update>
+	
+	<select id="listAll" resultType="pd">
+		select 
+			<include refid="Field"></include>
+		 from <include refid="tableName"></include>
+		where delflag=0  
+		<if test="key!=null and key!=''">
+			and name LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+		<if test="orderSaleId !=null and orderSaleId !=''">
+			and orderSaleId=#{orderSaleId} 
+		</if>
+	</select>
+	
+	<select id="listAll1" resultType="pd">
+		select 
+			id,
+			name
+		 from saleCustomer_info
+		where delflag=0  and iskhGh=2
+		<if test="key!=null and key!=''">
+			and name LIKE CONCAT(CONCAT('%', #{key}),'%')
+		</if>
+		<if test="saleId !=null and saleId !=''">
+			and lastSaleId=#{saleId} 
+		</if>
+	</select>
+	
+	
+	<select id="listCustomerKhgh" parameterType="pd" resultType="pd">
+	SELECT
+			a.id,
+			a.name,
+			a.postion,
+		 a.isKhGh,
+		 a.isaction,
+		 a.linkmanLandline,
+		 a.linkmanName,
+		 a.linkmanMobilePhone,
+		 IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		 IFNULL(a.zyTime,'') zyTime,
+		 IFNULL(i. STATUS, 0) gjStatus,
+		 IFNULL(i.score, 0) score
+		FROM
+			saleCustomer_info a
+		
+		 LEFT JOIN (SELECT
+		 	     <!--  DISTINCT -->
+				  createTime,
+				  STATUS,
+				  score,
+				  saleCustomerId
+				FROM
+					saleprocess_info ff
+				where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE  ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+		 ) i ON a.id = i.saleCustomerId 
+		
+		WHERE
+			a.delFlag = 0 AND a.isZy = 0
+		
+		<if test="isKhGh != null and isKhGh !=''"><!-- 注册时间检索 -->
+			and a.isKhGh = #{isKhGh}
+		</if>
+		<if test="provinceName != null and provinceName != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.province =#{provinceName}
+			)
+		</if>
+		<if test="cityName != null and cityName != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.cityName =#{cityName}
+			)
+		</if>
+		<if test="area != null and area != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.area =#{area}
+			)
+		</if>
+		<if test="status != null and status != ''"><!-- 关键词检索 -->
+			and
+			(
+			IFNULL(i.status,0) = #{status}
+			)
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.wechat LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.email LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanLandline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanName LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanMobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or 
+			exists(select 1 from linkman_info d where a.id=d.relateId and d.type=3 and (
+			d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)))
+		</if>
+		ORDER BY
+			a.zyTime DESC
+	</select>
+	
+	
+	<select id="listCustomerKhgh_COUNT" resultType="Long">
+    SELECT
+			count(0)
+		FROM
+			(
+				SELECT
+					1
+		FROM
+			saleCustomer_info a
+		<if test="status != null and status != ''">
+		 LEFT JOIN (SELECT
+				  createTime,
+				  STATUS,
+				  score,
+				  saleCustomerId
+				FROM
+					saleprocess_info ff
+				where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE  ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+		 ) i ON a.id = i.saleCustomerId 
+		 </if>
+		WHERE
+			a.delFlag = 0 AND a.isZy = 0
+		<if test="isKhGh != null and isKhGh !=''"><!-- 注册时间检索 -->
+			and a.isKhGh = #{isKhGh}
+		</if>
+		<if test="provinceName != null and provinceName != ''"><!-- 关键词检索 -->
+			and
+			(
+			<!-- a.province LIKE CONCAT(CONCAT('%', #{provinceName}),'%') -->
+			a.province =#{provinceName}
+			)
+		</if>
+		<if test="cityName != null and cityName != ''"><!-- 关键词检索 -->
+			and
+			(
+			<!-- a.cityName LIKE CONCAT(CONCAT('%', #{cityName}),'%') -->
+			a.cityName =#{cityName}
+			)
+		</if>
+		<if test="area != null and area != ''"><!-- 关键词检索 -->
+			and
+			(
+			<!-- a.area LIKE CONCAT(CONCAT('%', #{area}),'%') -->
+			a.area =#{area}
+			)
+		</if>
+		<if test="status != null and status != ''"><!-- 关键词检索 -->
+			and
+			(
+			IFNULL(i.status,0) = #{status}
+			)
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.wechat LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.email LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanLandline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanName LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanMobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or 
+			exists(select 1 from linkman_info d where a.id=d.relateId and d.type=3 and (
+			d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)))
+		</if>
+			) table_count
+	</select>
+	
+	
+	
+	
+	<select id="listSaleCustomer" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.name,
+			a.cjrName,
+			<!-- a.firstMan linkmanName, -->
+			a.postion,
+			a.type,
+			<!-- a.landline,
+			a.mobilePhone, -->
+			a.email,
+			a.province,
+			a.cityName,
+			a.zczb,
+			a.clrq,
+			a.area,
+			a.address,
+			<!-- a.status, -->
+			a.qq,
+			a.weChat,
+			<!-- a.customerresource,
+			a.ownerindustry,
+			a.money,
+			IFNULL(date_format(a.xcgetTime,'%Y-%m-%d %H:%i:%s'),'') xcgetTime, -->
+			a.content,
+			a.lastSaleId,
+			<!-- IFNULL(b.name,'无') lastSaleName, -->
+				<if test="type == null or type == ''">
+			<!-- case when a.iskhgh=3 and b.parent_Id='a5207f2a9a2b46f49ff52ff5c9669341' then '无'
+				else IFNULL(b.name,'无') end lastSaleName, -->
+				CASE
+				 WHEN a.iskhgh = 3
+				 AND (
+				 	SELECT
+						b1.parent_id
+				 	FROM
+				 		sys_user a1,
+				 		sys_role b1
+				 	WHERE
+						a1.role_id = b1.role_id and a.lastSaleId = a1.user_id
+				 ) = 'a5207f2a9a2b46f49ff52ff5c9669341' THEN
+					'无'
+				ELSE
+				 	IFNULL((
+				 	SELECT
+						a1.name
+				 	FROM
+				 		sys_user a1,
+				 		sys_role b1
+				 	WHERE
+						a1.role_id = b1.role_id and a.lastSaleId = a1.user_id
+				 ), '无')
+				 END lastSaleName,
+				</if>
+				<if test="type != null and type != ''">	
+			<!-- case when a.iskhgh=3 and b.parent_Id in('a5207f2a9a2b46f49ff52ff5c9669341','a8f76756b4dd4fbb8ca063bd76cb3fb5') then '无'
+				else IFNULL(b.name,'无') end lastSaleName,	 -->
+				CASE
+				 WHEN a.iskhgh = 3
+				 AND (
+				 	SELECT
+						b1.parent_id
+				 	FROM
+				 		sys_user a1,
+				 		sys_role b1
+				 	WHERE
+						a1.role_id = b1.role_id and a.lastSaleId = a1.user_id
+				 ) in('a5207f2a9a2b46f49ff52ff5c9669341','a8f76756b4dd4fbb8ca063bd76cb3fb5') THEN
+					'无'
+				ELSE
+				 	IFNULL((
+				 	SELECT
+						a1.name
+				 	FROM
+				 		sys_user a1,
+				 		sys_role b1
+				 	WHERE
+						a1.role_id = b1.role_id and a.lastSaleId = a1.user_id
+				 ), '无')
+				 END lastSaleName,
+				</if>
+			<!-- c.name dfSaleName, -->
+			(select NAME from sys_user c where  a.dfSaleId = c.user_id) dfSaleName,
+			a.isKhGh,
+			a.isaction,
+			a.linkmanLandline,
+			a.linkmanName,
+			a.linkmanMobilePhone,
+			IFNULL(date_format(a.qdTime,'%Y-%m-%d %H:%i:%s'),'') qdTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.zyTime,'%Y-%m-%d %H:%i:%s'),'') zyTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(i.gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(date_format(a.hrghTime,'%Y-%m-%d %H:%i:%s'),'') xchrghTime,			
+			IFNULL(i.status,0) gjStatus,
+			i.content remark,
+			IFNULL(i.score,0) score,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime 
+		from
+		 saleCustomer_info a 
+			<!-- left join 
+			(select a.name,a.user_Id,b.parent_id from sys_user a,sys_role b where a.role_id=b.role_id) b 
+			on a.lastSaleId=b.user_id 
+		left join 
+			sys_user c
+			on a.dfSaleId=c.user_id  -->
+		<choose>
+		<when test="type == null or type == ''">
+			 LEFT JOIN 
+			 (SELECT
+			 	 <!--  DISTINCT -->
+				  createTime,
+				  saleId,
+				  STATUS,
+				  score,
+				  gjTime,
+				  content,
+				  saleCustomerId
+				FROM
+					saleprocess_info ff
+				where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE  ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+		    ) i
+			on a.id=i.saleCustomerId
+		</when>
+		<otherwise>
+		inner join 
+			<!-- (SELECT a.* from saleprocess_info a 
+				inner join(
+				select min(createTime) createTime,saleCustomerId from saleprocess_info where status=3
+				GROUP BY saleCustomerId) b
+				on a.saleCustomerId=b.saleCustomerId and a.createTime=b.createTime
+				) i -->
+				(SELECT
+				  DISTINCT	
+				  createTime,
+				  saleId,
+				  STATUS,
+				  score,
+				  gjTime,
+				  content,
+				  saleCustomerId
+				FROM
+					saleprocess_info ff
+				    where saleCustomerId &gt;0 and status=3 and NOT EXISTS(SELECT 1 FROM (select * from saleprocess_info where `status`=3) b WHERE  ff.saleCustomerId = b.saleCustomerId AND  ff.id &gt;b.id)
+		      ) i
+			on a.id=i.saleCustomerId
+		</otherwise>
+		</choose>	
+			where a.delFlag = 0 
+		<if test="type == null or type == ''">and a.isZy=0</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.wechat LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.email LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanLandline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanName LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.linkmanMobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or 
+			exists(select 1 from linkman_info d where a.id=d.relateId and d.type=3 and (
+			d.landline LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			d.mobilePhone LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)))
+		</if>
+		<if test="saleName != null and saleName != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.lastSaleId LIKE CONCAT(CONCAT('%', #{saleName}),'%')
+			)
+		</if>
+		<if test="dfSaleName != null and dfSaleName != ''"><!-- 关键词检索 -->
+			and
+			(
+				a.dfSaleId=#{dfSaleName}
+			)
+		</if>
+		<if test="provinceName != null and provinceName != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.province= #{provinceName}
+			)
+		</if>
+		<if test="cityName != null and cityName != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.cityName = #{cityName}
+			)
+		</if>
+		<if test="area != null and area != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.area=#{area}
+			)
+		</if>
+		<if test="status != null and status != ''"><!-- 关键词检索 -->
+			and
+			(
+			IFNULL(i.status,0) = #{status}
+			)
+		</if>
+		<if test="type != null and type != ''"><!-- 关键词检索 -->
+			and
+			(
+				<choose>
+				<when test="tSaleId !=null and tSaleId !=''"><!-- 注册时间检索 -->
+					 i.saleId=#{tSaleId} <!-- and iskhGh=2 and i.status &gt;=3 and i.status &lt;9  -->
+				</when>
+				<when test="tDfsaleId !=null and tDfsaleId !=''"><!-- 注册时间检索 -->
+					<!-- i.status &gt;=3 and i.status &lt;9 and iskhGh in(2,3,5) and --> i.saleId=#{tDfsaleId}
+					<!-- 	and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12) -->
+				</when>
+				<when test="tDxzgId !=null and tDxzgId !=''"><!-- 注册时间检索 -->
+					<!-- i.status &gt;=3 and i.status &lt;9 and iskhGh in(2,3,5) and --> i.saleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341')) 
+					<!-- and i.saleCustomerId not in (SELECT c.saleCustomerId 
+						from saleprocess_info c
+						inner join(select max(createTime) createTime,saleCustomerId from saleprocess_info 
+						GROUP BY saleCustomerId) d
+						on c.saleCustomerId=d.saleCustomerId and c.createTime=d.createTime and c.`status`=12) -->
+				</when>
+				<otherwise>
+					(i.status &gt;=3 and i.status &lt;9 <!-- and iskhGh in(2,3) -->) 
+				</otherwise>
+				</choose>
+				
+			)
+		</if>
+		<if test="startTime !=null and startTime !=''">
+			and date_format(i.createTime,'%Y-%m-%d') &gt;= #{startTime}
+		</if>	
+		<if test="endTime !=null and endTime !=''">
+			and date_format(i.createTime,'%Y-%m-%d') &lt;= #{endTime}
+		</if>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.zyTime &gt;= #{createTimeStart}
+		</if>
+		<if test="createTimeEnd != null and createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.zyTime &lt;= #{createTimeEnd}
+		</if>
+		<if test="isKhGh != null and isKhGh !=''"><!-- 注册时间检索 -->
+			and a.isKhGh = #{isKhGh}
+		</if>
+		<if test="saleId !=null and saleId !=''"><!-- 注册时间检索 -->
+			and a.lastSaleId=#{saleId} 
+		</if>
+		<if test="dxzgId !=null and dxzgId !=''"><!-- 注册时间检索 -->
+			and a.lastSaleId in (select user_id from sys_user where role_id in(select role_id from sys_role where  parent_id ='a5207f2a9a2b46f49ff52ff5c9669341'))
+		</if>
+		<if test="dfSaleId !=null and dfSaleId !=''"><!-- 注册时间检索 -->
+			and i.saleId=#{dfSaleId}
+		</if>
+		<if test="saleIds !=null "><!-- 注册时间检索 -->
+			and a.lastSaleId in 
+			<foreach item="item" index="index" collection="saleIds" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="cusRes !=null and cusRes !=''"><!-- 注册时间检索 -->
+			and a.type=#{cusRes}
+		</if>
+		<if test="isKhGh==2 and (gjTime=='' or gjTime==null) and (xcgjTime=='' or xcgjTime==null) and (xchrghTime=='' or xchrghTime==null)">
+			order by a.qdTime desc,i.createTime is not null,i.createTime asc,a.createTime desc
+		</if>
+		<if test="isKhGh!=2 and (gjTime=='' or gjTime==null) and (xcgjTime=='' or xcgjTime==null) and (xchrghTime=='' or xchrghTime==null)">
+			order by a.zyTime desc
+		</if>
+		<choose>
+			<when test="gjTime==0 and gjTime !=null and gjTime !=''">
+			 	order by i.createTime
+			</when>
+			<when test="gjTime==1 and gjTime !=null and gjTime !=''">
+				order by i.createTime desc
+			</when>
+			<when test="xcgjTime==0 and xcgjTime !=null and xcgjTime !=''">
+			 	order by i.gjTime
+			</when>
+			<when test="xcgjTime==1 and xcgjTime !=null and xcgjTime !=''">
+				order by i.gjTime desc
+			</when>
+			<when test="xchrghTime==0 and xchrghTime !=null and xchrghTime !=''">
+			 	order by a.hrghTime
+			</when>
+			<when test="xchrghTime==1 and xchrghTime !=null and xchrghTime !=''">
+				order by a.hrghTime desc
+			</when>
+		</choose>
+	</select>
+	
+	<!-- 
+	insert into 
+			saleCustomer_info(name,cjrName,firstMan,postion,landline,mobilePhone,email,province,cityName,area,address,status,customerresource,ownerindustry,money,xcgetTime,content,linkmanLandline,linkmanName,linkmanMobilePhone,isKhgh,lastSaleId,qq,weChat)
+		values
+			(#{name},#{cjrName},#{firstMan},#{postion},#{landline},#{mobilePhone},#{email},#{province},#{cityName},#{area},#{address},#{status},#{customerresource},#{ownerindustry},#{money},#{xcgetTime},#{content},#{linkmanLandline},#{linkmanName},#{linkmanMobilePhone},#{isKhgh},#{saleId},#{qq},#{weChat})
+	 -->
+	<insert id="saveSaleCustomer" parameterType="pd" keyProperty="id" useGeneratedKeys="true">
+		insert into 
+			saleCustomer_info(name,cjrName,email,province,cityName,area,address,content,linkmanLandline,linkmanName,linkmanMobilePhone,isKhgh,lastSaleId,qq,weChat,qdTime,hrghTime,type,zczb,clrq)
+		values
+			(#{name},#{cjrName},#{email},#{province},#{cityName},#{area},#{address},#{content},#{linkmanLandline},#{linkmanName},#{linkmanMobilePhone},#{isKhgh},#{saleId},#{qq},#{weChat},#{qdTime},#{hrghTime},#{type},#{zczb},#{clrq})
+	</insert>
+	
+	<insert id="saveSaleLinkman" parameterType="pd">
+		insert into linkman_info(name,relateId,mobilePhone,landLine,type) values(#{linkmanName},#{id},#{linkmanMobilePhone},#{linkmanLandline},3)
+	</insert>
+	
+	<select id="listSaleCustomer1" parameterType="pd" resultType="pd">
+		select name from saleCustomer_info where delflag=0
+	</select>
+	
+	<select id="findRoleId" parameterType="pd" resultType="pd">
+		select role_Id roleId from sys_user where user_id=#{saleId}
+	</select>
+	
+	<select id="findName" parameterType="pd" resultType="pd">
+		select 1 from saleCustomer_info where name=#{name} and delflag=0
+	</select>
+	
+	<select id="findSaleCustomerById" parameterType="pd" resultMap="maps1">
+		<if test="id != null and id > 0">
+		select
+			a.id,
+			a.name,
+			a.cjrName,
+			<!-- a.firstMan linkmanName, -->
+			a.postion,
+			<!-- a.landline,
+			a.mobilePhone, -->
+			a.email,
+			a.province,
+			IFNULL(a.type,0) type,
+			a.cityName,
+			a.area,
+			a.address,
+			<!-- a.status, -->
+			a.qq,
+			a.weChat,
+			a.zczb,
+			a.clrq,
+			<!-- a.customerresource,
+			a.ownerindustry,
+			a.money,
+			IFNULL(date_format(a.xcgetTime,'%Y-%m-%d %H:%i:%s'),'') xcgetTime, -->
+			a.content,
+			a.lastSaleId,
+			<!-- a.saleId, -->
+			IFNULL(b.name,'无') lastSaleName,
+			<!-- c.name saleName, -->
+			a.isKhGh,
+			a.isaction,
+			a.linkmanLandline,
+			a.linkmanName,
+			a.linkmanMobilePhone,
+			IFNULL(date_format(a.qdTime,'%Y-%m-%d'),'') qdTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(i.gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(i.status,0) gjStatus,
+			i.score,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+		 saleCustomer_info a 
+			left join 
+			sys_user b 
+			on a.lastSaleId=b.user_id and b.isQuit=0
+		<!-- left join 
+			sys_user c
+			on a.saleId=c.user_id and c.isQuit=0 -->
+		left join 
+			(SELECT
+				 <!--  DISTINCT -->
+				  createTime,
+				  saleId,
+				  STATUS,
+				  score,
+				  gjTime,
+				  content,
+				  saleCustomerId
+				FROM
+					saleprocess_info  ff
+				where saleCustomerId &gt;0 and NOT EXISTS(SELECT 1 FROM saleprocess_info b WHERE   ff.saleCustomerId = b.saleCustomerId AND  ff.id &lt;b.id)
+		    ) i
+			on a.id=i.saleCustomerId		
+		where a.id = #{id} limit 1
+		</if>
+	</select>
+	
+	<!-- 管理日志、联系人、进程、附件 -->
+	<resultMap type="pd" id="maps1">
+		<id property="id" column="id"/>
+		<collection property="linkmans" column="id" select="findlinkmanInfo"></collection>
+		<collection property="callInfo" column="id" select="findCallInfo"></collection>
+		<collection property="logs" column="id" select="findLogInfo"></collection>
+		<collection property="attachs" column="id" select="findAttachsInfo"></collection>
+	</resultMap>
+	
+	<select id="findlinkmanInfo"  parameterType="Integer" resultType="pd">
+		select a.id,a.name,a.mobilePhone,a.landline,a.postion,a.email,a.wechat,a.qq,a.remark from linkman_info a where a.relateId=#{id}  and a.type=3
+	</select>
+	
+	<select id="findLogInfo"  parameterType="Integer" resultType="pd">
+		select a.userId,a.type,a.qzdz,a.hzdz,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,b.name name from log_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where a.saleCustomerId=#{id}  and a.flag=0
+	</select>
+	
+	<select id="findAttachsInfo" parameterType="Integer" resultType="pd">
+			SELECT
+		id,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		IFNULL(date_format(uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+		uploader,
+		CASE type
+			WHEN 0 THEN
+			'合同'
+			WHEN 1 THEN
+			'案件'
+			WHEN 2 THEN
+			'诉讼/仲裁'
+			WHEN 3 THEN
+			'回款明细'
+			WHEN 4 THEN
+			'案件报告'
+			WHEN 5 THEN
+			'律师函'
+			WHEN 6 THEN
+			'案件关闭'
+			WHEN 7 THEN
+			'案件结案'
+			WHEN 8 THEN
+			'案件交接'
+			WHEN 9 THEN
+			'案件归档'
+			WHEN 10 THEN
+			'案件跟进'
+			WHEN 11 THEN
+			'快递'
+			WHEN 12 THEN
+			'发票'
+			WHEN 13 THEN
+			'销售动态'
+			WHEN 14 THEN
+		    '潜在客户'
+			ELSE
+			'未知'
+			END type,
+		IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM attach_info WHERE delFlag = 0 AND relateId=#{id} and type=14 order by id desc
+	</select>
+	
+	<select id="findCallInfo" parameterType="HashMap"  resultType="pd">
+		select IFNULL(date_format(j.time,'%Y-%m-%d %H:%i:%s'),'') time,j.id,j.flag,j.userId,
+			IFNULL(j.remark,'') remark from call_info j where j.customerId=#{id} order by j.time desc 
+	</select>
+	
+	<update id="updateSaleId" parameterType="pd">
+		update saleCustomer_info set 
+				isKhGh = 2,
+				<if test="hrghTime !=null and hrghTime !=''">
+					hrghTime=#{hrghTime},
+				</if>
+				<if test="dfSaleId !=null and dfSaleId !=''">
+					dfSaleId=#{dfSaleId},
+				</if>
+				<if test="type !=null and type !=''">
+					type=#{type},
+				</if>
+					qdTime =#{qdTime},
+					lastSaleId=#{saleId}
+			where 1=1 and id in
+			<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+	</update>
+	
+	<insert id="saveSaleProcess" parameterType="pd"  useGeneratedKeys="true" keyProperty="id">
+		insert into saleProcess_info(callUuid,saleId,saleCustomerId,gjTime,content,status,type,createTime,name,userId,score) values(#{callUuid},#{saleId},#{saleCustomerId},#{time},#{content},#{status},#{type},#{createTime},#{linkmanName},#{userId},#{score})
+	</insert>
+	
+	<insert id="saveSaleProcess1" parameterType="pd">
+		insert into saleProcess_info(saleId,saleCustomerId,gjTime,content,status,type,createTime) values(#{saleId},#{saleCustomerId},#{gjTime},#{content},#{status},#{type},#{createTime})
+	</insert>
+	
+	<update id="updateProcess" parameterType="pd">
+		update saleProcess_info set
+			editTime = current_timestamp()
+			<if test="recordUrl != null and recordUrl != ''">
+				,recordUrl=#{recordUrl} 
+			</if>
+			<if test="startTime != null and startTime != ''">
+				,startTime=#{startTime} 
+			</if>
+			<if test="billSeconds != null and billSeconds != ''">
+				,billSeconds=#{billSeconds} 
+			</if>
+			<if test="userId != null and userId != ''">
+				,userId=#{userId} 
+			</if>
+			,score=#{score}
+			,saleCustomerId=#{saleCustomerId}
+			,name=#{linkmanName}
+			,gjTime=#{time}
+			,content=#{content}
+			,status=#{status}
+		 where callUuid=#{callUuid} 
+	</update>
+	
+	<update id="updateKhgh" parameterType="pd">
+		update saleCustomer_info set isKhgh=#{isKhgh},zyTime=#{zyTime} where id 
+		in
+		<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</update>
+
+	<select id="findProcessByIdOrCallUuid" parameterType="pd" resultType="pd">
+		select id,
+			   content,
+			   saleId,
+			   IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			   saleCustomerId
+		from saleprocess_info
+			  where 1=1
+			 <if test="callUuid !=null and callUuid !=''">
+			 	and callUuid=#{callUuid}
+			 </if> 	
+			 <if test="id !=null and id !=''">
+			 	and id=#{id}
+			 </if> 	
+	</select>	
+	
+	<update id="updateKhgh5" parameterType="pd" >
+		update saleCustomer_info set isKhgh=#{isKhgh},zyTime=#{zyTime} where id =#{saleCustomerId}
+	</update>
+	
+	<insert id="saveSaleProcessAbout" parameterType="pd">
+		insert into saleProcess_about_info(processId,relateId,type) values(#{id},#{saleProcessId},#{type})
+ 	</insert>
+ 	
+ 	
+ 	
+ 	<select id="findProcessInfo" parameterType="pd" resultMap="abouts">
+ 		select id,type,IFNULL(date_format(gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,content,status,recordUrl,name,score from saleProcess_info where saleCustomerId=#{id} order by createTime desc
+ 	</select>
+ 	
+ 	<resultMap type="pd" id="abouts">
+ 			<id property="id" column="id"/>
+ 			<collection property="linkmans" column="id" select="selectLinkMan"></collection>
+ 			<collection property="warnMans" column="id" select="selectWarnMan"></collection>
+ 			<collection property="attachs" column="id" select="selectAttach"></collection>
+ 			<collection property="evaluate" column="id" select="findEvaluateInfo"></collection>
+ 	</resultMap>
+ 	
+ 	
+ 	<select id="selectLinkMan" parameterType="Integer" resultType="pd">
+ 		select b.id,b.name linkmanName from saleprocess_about_info a,linkman_info b where a.relateId=b.id and a.processId=#{id}  and a.type=1
+ 	</select>
+ 	
+ 	<select id="selectWarnMan" parameterType="Integer" resultType="pd">
+ 		select b.user_id id,b.name userName from saleprocess_about_info a,sys_user b where a.relateId=b.user_Id and a.processId=#{id}  and a.type=0
+ 	</select>
+ 	
+ 	<select id="selectAttach" parameterType="Integer" resultType="pd">
+ 		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=13 order by id desc
+ 	</select>
+ 	
+ 	<insert id="saveLogs" parameterType="pd" >
+ 		insert into log_info(userId,type,qzdz,hzdz,saleCustomerId,flag) values(#{userId},#{type},#{qzdz},#{hzdz},#{saleCustomerId},#{flag})
+ 	</insert>
+ 	
+ 	<!-- and date_format(createTime,'%Y-%m-%d %H:%i:%s') &gt;= date_format(#{qdTime},'%Y-%m-%d %H:%i:%s') -->
+ 	<select id="findAction" parameterType="pd" resultType="pd">
+ 		select saleCustomerId from log_info where saleCustomerId=#{id} and flag=0 and date_format(createTime,'%Y-%m-%d') &lt;= date_format(#{hqdTime},'%Y-%m-%d %H:%i:%s') limit 1
+ 	</select>
+ 	
+ 	<update id="updateKhgh1" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=0,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<update id="updateKhgh2" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=1,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<update id="updateKhgh3" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=3,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	
+ 	<update id="updateKhgh4" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=4,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<update id="updateKhghc5" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=5,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<update id="updateKhgh6" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=6,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<update id="updateKhgh7" parameterType="java.util.List">
+ 		update saleCustomer_info set isKhgh=7,zyTime=current_timestamp() where id 
+		in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+ 	</update>
+ 	
+ 	<insert id="saveCustomer" parameterType="pd">
+ 		insert into customer_info(name) values(#{name})
+ 	</insert>
+ 	
+ 	<update id="updateCustomer" parameterType="pd">
+ 		update saleCustomer_info set isZy=1 where id=#{id} 
+ 	</update>
+ 	
+ 	<insert id="saveLinkmans"  parameterType="java.util.List">
+		insert into
+			linkman_info
+		(
+			relateId,
+			name,
+			landline,
+			mobilePhone,
+			postion
+		)values
+		 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+                 (
+                 #{reddemCode.relateId}, #{reddemCode.name},
+                 #{reddemCode.landline},
+              	 #{reddemCode.mobilePhone},
+                 #{reddemCode.postion}
+               )
+            </foreach>
+	</insert>
+ 	
+ 	<update id="updateSaleCustomer" parameterType="pd">
+ 		update salecustomer_info
+ 				set  editTime=#{editTime}
+ 				<if test="postion !=null">
+ 					,postion=#{postion}
+ 				</if>
+ 				<if test="name !=null and name !=''">
+ 					,name=#{name}
+ 				</if>
+ 				<if test="zczb !=null and zczb !=''">
+ 					,zczb=#{zczb}
+ 				</if>
+ 				<if test="clrq !=null and clrq !=''">
+ 					,clrq=#{clrq}
+ 				</if>
+ 				<!-- <if test="name !=null and name !=''">
+ 					,name=#{name}
+ 				</if>
+ 				<if test="postion !=null and postion !=''">
+ 					,postion=#{postion}
+ 				</if>
+ 				<if test="landline !=null and landline !=''">
+ 					,landline=#{landline}
+ 				</if>
+ 				<if test="mobilePhone !=null and mobilePhone !=''">
+ 					,mobilePhone=#{mobilePhone}
+ 				</if> -->
+ 				<if test="email !=null">
+ 					,email=#{email}
+ 				</if>
+ 				<if test="province !=null">
+ 					,province=#{province}
+ 				</if>
+ 				<if test="cityName !=null">
+ 					,cityName=#{cityName}
+ 				</if>
+ 				<if test="area !=null">
+ 					,area=#{area}
+ 				</if>
+ 				<if test="address !=null">
+ 					,address=#{address}
+ 				</if>
+ 				<!-- <if test="status !=null and status !=''">
+ 					,status=#{status}
+ 				</if> -->
+ 				<!-- <if test="customerresource !=null and customerresource !=''">
+ 					,customerresource=#{customerresource}
+ 				</if>
+ 				<if test="ownerindustry !=null and ownerindustry !=''">
+ 					,ownerindustry=#{ownerindustry}
+ 				</if>
+ 				<if test="money !=null and money !=''">
+ 					,money=#{money}
+ 				</if> 
+ 				<if test="xcgetTime !=null and xcgetTime !=''">
+ 					,xcgetTime=#{xcgetTime}
+ 				</if>-->
+ 				<if test="content !=null">
+ 					,content=#{content}
+ 				</if>
+ 				<if test="linkmanLandline !=null">
+ 					,linkmanLandline=#{linkmanLandline}
+ 				</if>
+ 				<if test="linkmanName !=null">
+ 					,linkmanName=#{linkmanName}
+ 				</if>
+ 				<if test="linkmanMobilePhone !=null">
+ 					,linkmanMobilePhone=#{linkmanMobilePhone}
+ 				</if>
+ 				<if test="qq !=null">
+ 					,qq=#{qq}
+ 				</if>
+ 				<if test="weChat !=null">
+ 					,weChat=#{weChat}
+ 				</if>
+ 			where id=#{id} 
+	</update>
+	
+	
+	<insert id="saveTasks" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		insert into qztask_info(saleIds,saleNames,time,days,cfdays,isOpen)  values(#{saleIds},#{saleNames},#{time},#{days},#{cfdays},#{isOpen})
+	</insert>
+	
+	<update id="updateTasks" parameterType="pd">
+		update qztask_info set 
+			editTime=#{editTime}
+			<if test="saleIds !=null and saleIds !=''">
+				,saleIds=#{saleIds}
+				,saleNames=#{saleNames}
+			</if>
+			<if test="time !=null and time !=''">
+				,time=#{time}
+			</if>
+			<if test="days !=null and days !=''">
+				,days=#{days}
+			</if>
+			<if test="cfdays !=null and cfdays !=''">
+				,cfdays=#{cfdays}
+			</if>
+			<if test="isOpen !=null and isOpen !=''">
+				,isOpen=#{isOpen}
+			</if>
+		where id=#{id} 
+	</update>
+	
+	<select id="findTaskById" parameterType="pd" resultType="pd">
+		select saleIds,time,days,id,type from qztask_info where id=#{id} 
+	</select>
+	
+	<delete id="delteTask" parameterType="pd">
+		delete from qztask_info where id =#{id} 
+	</delete>
+	
+	<select id="listQztask" parameterType="pd" resultType="pd">
+		select saleIds,time,days,id,type,cfdays,isOpen,saleNames from qztask_info 
+	</select>
+
+	<insert id="saveTemporyInfo" parameterType="java.util.List">
+		insert into tempory_info(saleCustomerId,hrghTime) values
+		<foreach collection="list" item="attachs" index="index" separator=",">
+			(
+			#{attachs.saleCustomerId},
+			#{attachs.hrghTime}
+			)
+		</foreach>
+	</insert>
+
+	
+	<select id="findYzProcessById" parameterType="pd" resultType="pd">
+		select id,
+			   remark,
+			   runnerId 
+		from process_info
+			  where 1=1 and callUuid=#{callUuid}
+	</select>	
+	
+	
+	<update id="updateProcess1" parameterType="pd">
+		update process_info set
+				recordUrl=#{recordUrl},startTime=#{startTime},billSeconds=#{billSeconds} 
+		 where callUuid=#{callUuid} 
+	</update>
+	
+	<update id="updateHrghTime" parameterType="pd">
+		update saleCustomer_info  set 
+		<choose>
+		<when test="day!=null and day!=''">
+		hrghTime=date_format(DATE_add(qdTime, INTERVAL #{day} DAY),'%Y-%m-%d %H:%i:%s')
+		</when>
+		<otherwise>
+		hrghTime=null
+		</otherwise>
+		</choose>
+		where  iskhGh=2 and lastSaleId  in 
+		<foreach item="item" index="index" collection="saleIds" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</update>
+	
+	
+	<update id="updateHrghTime2" parameterType="pd">
+		update saleCustomer_info  set 
+		hrghTime=date_format(DATE_add(qdTime, INTERVAL #{day} DAY),'%Y-%m-%d %H:%i:%s')
+		where id=#{saleCustomerId}
+	</update>
+
+	<update id="updateHrghTime1" parameterType="pd">
+		update saleCustomer_info  set
+		hrghTime=#{hrghTime}
+		where id=#{saleCustomerId}
+	</update>
+
+
+	<update id="updateHrghTime3">
+		update saleCustomer_Info si,tempory_info ti set si.hrghTime=ti.hrghTime where si.id=ti.saleCustomerId and si.isKhgh=2
+	</update>
+
+	<delete id="deleteTemporyInfo">
+		delete from tempory_info
+	</delete>
+	
+	<select id="findAllTask" resultType="pd">
+		select days,saleIds,cfdays,isOpen from qztask_info 
+	</select>
+	
+	<!-- 批量插入 -->
+	<insert id="saveSaleCustomers" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+		insert into
+			saleCustomer_info(name,cjrName,email,province,cityName,area,address,content,linkmanLandline,linkmanName,linkmanMobilePhone,isKhgh,lastSaleId,qq,weChat,qdTime,hrghTime,type,zczb,clrq)
+		values	
+		<foreach collection="list" item="item" index="index" separator="," >  
+        	(#{item.name},#{item.cjrName},#{item.email},#{item.province},#{item.cityName},#{item.area},#{item.address},#{item.content},#{item.linkmanLandline},#{item.linkmanName},#{item.linkmanMobilePhone},#{item.isKhgh},#{item.saleId},#{item.qq},#{item.weChat},#{item.qdTime},#{item.hrghTime},#{item.type},#{item.zczb},#{item.clrq})  
+    	</foreach> 
+	</insert>	
+	
+	<!-- 批量插入 -->
+	<insert id="saveSaleProcess1s" parameterType="java.util.List">
+		insert into
+		saleProcess_info(saleId,saleCustomerId,gjTime,content,status,type,createTime) values
+		<foreach collection="list" item="item" index="index" separator="," >  
+        	(#{item.saleId},#{item.saleCustomerId},#{item.gjTime},#{item.content},#{item.status},#{item.type},#{item.createTime})  
+    	</foreach> 
+	</insert>	
+	
+	<select id="findPhoneSale" parameterType="pd" resultType="pd">
+		select user_id from sys_user where user_Id=#{saleId} and role_id='30b1487221464d369ca4c2462ccca920'
+	</select>
+	
+	<select id="findPhoneSaleByIds" parameterType="pd" resultType="pd">
+		select a.id from saleCustomer_Info a inner join sys_user b on a.lastsaleId=b.user_Id and b.role_id='30b1487221464d369ca4c2462ccca920' and b.isQuit=0
+		where a.id in
+		<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+	
+	<insert id="saveNoticInfo" parameterType="pd" keyProperty="id" useGeneratedKeys="true">
+		insert into notic_info(userId,relateId,content,type,flag) values(#{userId},#{relateId},#{content},#{type},#{flag});
+	</insert>
+	
+	<update id="updateNoticInfo" parameterType="pd">
+		update notic_info set userId=#{userId}, flag=#{flag} where relateId=#{relateId} and type=#{type} 
+	</update>
+	
+	<update id="updateOrderInfo" parameterType="pd">
+		update order_info set saleId=#{orderSaleId} where customerId =#{id}
+	</update>
+	
+	<select id="findNoticInfo" parameterType="pd" resultType="pd">
+		select * from notic_info where  relateId=#{relateId} and type=#{type} 
+	</select>
+	
+	<delete id="deleteNoticInfo" parameterType="pd">
+		delete from notic_indo where  relateId=#{relateId} and type=#{type} 
+	</delete>
+	
+	<select id="showProcessDetail" parameterType="pd" resultMap="evaluateInfo">
+		select
+			b.id,
+			b.type,
+			d.name saleName,
+			b.saleId saleId,
+			c.name saleCustomerName,
+			IFNULL(date_format(b.gjTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(date_format(b.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			b.content,
+			b.status,
+			b.recordUrl,
+			b.name 
+				from 
+			saleProcess_info b inner join
+			notic_info 
+			a
+			on a.relateId=b.id and a.type in (0,2)
+			inner join
+			saleCustomer_info c
+			on b.saleCustomerId=c.id
+			inner join
+			sys_user d
+			on b.saleId=d.user_Id
+			where a.id=#{id}
+			limit 1
+	</select>
+	
+	
+	
+	
+	<select id="showSwgwProcessDetail" parameterType="pd" resultMap="evaluateInfo">
+		select
+			b.id,
+			d.name swgwName,
+			IFNULL(date_format(b.nextTime,'%Y-%m-%d %H:%i:%s'),'') xcgjTime,
+			IFNULL(date_format(b.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			b.content,
+			b.type,
+			c.name cutomerName
+				from 
+			swgwprocess_info b inner join
+			notic_info 
+			a
+			on a.relateId=b.id and a.type =11
+			inner join
+			customer_info c
+			on b.customerId=c.id
+			inner join
+			sys_user d
+			on b.swgwId=d.user_Id
+			where a.id=#{id}
+			limit 1
+	</select>
+	
+	<resultMap type="pd" id="evaluateInfo">
+		<id column="id" property="id"/>
+		<collection property="evaluate" column="id" select="findEvaluateInfo"></collection>
+	</resultMap>	
+	
+	<select id="findEvaluateInfo" parameterType="pd" resultType="pd">
+		select a.Content,b.name,
+		IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime
+		 from dp_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where a.type=1 and a.processId=#{id}
+	</select>
+	
+		<select id="showProcessDetail1" parameterType="pd" resultMap="evaluateInfo1">
+			select 
+					a.id,
+					a.userId,
+					b.name,
+					date_format(a.time,'%Y-%m-%d') time,
+					date_format(a.zbtimeStart,'%Y-%m-%d') zbtimeStart,
+					date_format(a.zbtimeEnd,'%Y-%m-%d') zbtimeEnd,
+					a.readMan,
+					a.copyMan,
+					a.content,
+					a.plan,
+					a.type,
+					a.isDo,
+					date_format(a.creatTime,'%Y-%m-%d %H:%i:%s') creatTime,
+					date_format(a.editTime,'%Y-%m-%d %H:%i:%s') editTime
+				from 
+					saleReport_info a inner join
+				notic_info 
+				b
+				on b.relateId=a.id and a.type in (1,3)
+				inner join
+				sys_user c
+				on a.userId=c.user_Id
+				where b.id=#{id}
+				limit 1
+		</select>
+	
+		<resultMap type="pd" id="evaluateInfo1">
+			<id property="id" column="id"/>
+			<collection property="attachs" column="id" select="findAttach"></collection>
+			<collection property="evaluate" column="id" select="findEvaluateInfo1"></collection>
+		</resultMap>
+		
+		<select id="findAttach" parameterType="Integer"  resultType="pd">
+			select * from attach_info where type=15 and relateId=#{id}  order by id desc
+		</select>
+		
+		<select id="findEvaluateInfo1" parameterType="pd" resultType="pd">
+			select a.Content,b.name,a.type,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime
+			 from dp_info a
+			inner join
+			sys_user b
+			on a.userId=b.user_Id
+			where a.saleReportId=#{id}
+		</select>
+	
+	
+	
+	<insert id="saveEvaluate" parameterType="pd">
+		insert into dp_info(saleReportId,processId,Content,userId,type)
+		values(#{saleReportId},#{processId},#{Content},#{userId},#{type})
+	</insert>
+	
+	<delete id="deleteSaleReport" parameterType="pd">
+		delete from saleReport_info where id=#{id} 
+	</delete>
+	
+	<delete id="deleteAttach" parameterType="pd">
+		update attach_info set delflag=1 where id=#{id} 
+	</delete>
+	
+	
+	<delete id="delete1" parameterType="pd">
+		delete from keywords_info where id=#{id} 
+	</delete>
+	
+	<insert id="save" parameterType="pd">
+		insert into keywords_info(keywords) values(#{keywords})
+	</insert>
+	
+	<update id="update" parameterType="pd">
+		update keywords_info set keywords=#{keywords} where id=#{id} 
+	</update>
+	
+	<select id="listWords" parameterType="pd" resultType="pd">
+		select * from keywords_info where 1=1 
+		<if test="gjc != null and gjc != ''"><!-- 注册时间检索 -->
+			and (keywords LIKE CONCAT(CONCAT('%', #{gjc}),'%'))
+		</if>
+		order by createTime desc
+	</select>
+	
+	<select id="findLastCustomer" parameterType="pd" resultType="pd">
+		SELECT
+			id
+		FROM
+			salecustomer_info
+		WHERE
+			lastSaleId = #{lastSaleId}
+		AND date_format(
+			DATE_SUB(curdate(), INTERVAL #{cfdays} DAY),
+			'%Y-%m-%d'
+		) &lt;= date_format(hrghTime, '%Y-%m-%d') and id=#{id}
+	</select>
+	
+	
+	
+	<insert id="saveSwgwProcess" parameterType="pd"  useGeneratedKeys="true" keyProperty="id">
+		insert into swgwProcess_info(swgwId,CustomerId,nextTime,content,type,createTime,linkmanName,userId) values(#{swgwId},#{customerId},#{nextTime},#{content},#{type},#{createTime},#{linkmanName},#{userId})
+	</insert>
+	
+	<update id="updateName" parameterType="pd">
+		<if test="flag==0">
+			update saleCustomer_info set isKhgh=#{isKhgh} where name=#{name} and isKhgh not in(2,3,5,7)
+		</if>
+		<if test="flag==1">
+			update saleCustomer_info set isKhgh=#{isKhgh} where name=#{name} and isKhgh not in(2,3,5)
+		</if>
+	</update>
+	
+	<update id="updateName1" parameterType="pd">
+		<if test="flag==0">
+			update saleCustomer_info set type=#{isKhgh} where name=#{name} and isKhgh =2
+		</if>
+		<if test="flag==1">
+			update saleCustomer_info set type=#{isKhgh} where name=#{name} and isKhgh =2
+		</if>
+	</update>
+	
+	<select id="findDxswgw" parameterType="pd" resultType="pd">
+		select * from sys_user where role_id='90564dd8b75a4f6d815ce418462d401c' limit 1
+	</select>
+	
+	<insert id="saveSwgwBgInfo" parameterType="pd">
+		insert into swgwBg_info(userId,roleId,time) values(#{userId},#{roleId},#{time})
+	</insert>
+	
+	<select id="finSwgwBgInfo" parameterType="pd" resultType="pd">
+		select * from swgwBg_info where time=#{time} and userId=#{userId} 
+	</select>
+	
+	<update id="upDateSwgwBgInfo" parameterType="pd"> 
+		update swgwBg_info set roleId=#{roleId} where time=#{time} and userId=#{userId} 
+	</update>
+</mapper>

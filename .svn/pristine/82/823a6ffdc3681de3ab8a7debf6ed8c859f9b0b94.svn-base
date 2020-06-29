@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ExpressMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		express_info
+	</sql>
+
+	<!-- 快递列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			IFNULL(a.expressCom,'') expressCom,
+			IFNULL(a.expressMoney,'') expressMoney,
+			IFNULL(a.expressNo,'') expressNo,
+			IFNULL(a.expressType,'') expressType,
+			IFNULL(a.target,'') target,
+			IFNULL(a.jjnr,'') jjnr,
+			IFNULL(a.typeDetail,'') typeDetail,
+			IFNULL(a.fjdw,'') fjdw,
+			IFNULL(a.fjr,'') fjr,
+			IFNULL(a.dwdz,'') dwdz,
+			IFNULL(a.lxfs,'') lxfs,
+			IFNULL(a.sendway,'') sendway,
+			IFNULL(a.status,'') status,
+			IFNULL(date_format(a.reciveTime,'%Y-%m-%d %H:%i:%s'),'') reciveTime,
+			IFNULL(date_format(a.sendTime,'%Y-%m-%d %H:%i:%s'),'') sendTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			express_info a  
+			where 1=1 and a.delflag=0
+		<if test="pd.sendway != null and pd.sendway != ''"><!-- 注册时间检索 -->
+			and a.sendway = #{pd.sendway}
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.target LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			a.fjr LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.issou == 1"><!-- 关键词检索 -->
+			and a.reciveTime is null
+		</if>
+		<if test="pd.issou == 2"><!-- 关键词检索 -->
+			and a.reciveTime is not null
+		</if>
+		<if test="pd.expressType !=null and pd.expressType !=''"><!-- 关键词检索 -->
+			and a.expressType=#{pd.expressType}
+		</if>
+		<if test="pd.userId !=null and pd.userId !=''"><!-- 关键词检索 -->
+			and a.userId =#{pd.userId} 
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.sendTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.sendTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			IFNULL(a.expressMoney,0) expressMoney,
+			IFNULL(a.expressCom,'') expressCom,
+			IFNULL(a.expressNo,'') expressNo,
+			IFNULL(a.expressType,'') expressType,
+			IFNULL(a.target,'') target,
+			IFNULL(a.jjnr,'') jjnr,
+			IFNULL(a.typeDetail,'') typeDetail,
+			IFNULL(a.fjdw,'') fjdw,
+			IFNULL(a.fjr,'') fjr,
+			IFNULL(a.dwdz,'') dwdz,
+			IFNULL(a.lxfs,'') lxfs,
+			IFNULL(a.sendway,'') sendway,
+			IFNULL(a.status,'') status,
+			IFNULL(date_format(a.reciveTime,'%Y-%m-%d %H:%i:%s'),'') reciveTime,
+			IFNULL(date_format(a.sendTime,'%Y-%m-%d %H:%i:%s'),'') sendTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			express_info a  
+			where 1=1 and a.delflag=0
+		<if test="sendway != null and sendway != ''"><!-- 注册时间检索 -->
+			and a.sendway = #{sendway}
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			a.target LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			a.fjr LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)
+		</if>
+		<if test="issou == 1"><!-- 关键词检索 -->
+			and a.reciveTime is null
+		</if>
+		<if test="issou == 2"><!-- 关键词检索 -->
+			and a.reciveTime is not null
+		</if>
+		<if test="expressType !=null and expressType !=''"><!-- 关键词检索 -->
+			and a.expressType=#{expressType}
+		</if>
+		<if test="userId !=null and userId !=''"><!-- 关键词检索 -->
+			and a.userId =#{userId} 
+		</if>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.sendTime &gt;= #{createTimeStart}
+		</if>
+		<if test="createTimeEnd != null and createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.sendTime &lt;= #{createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<insert id="save"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			<include refid="tableName"></include>
+		(
+			expressNo,
+			orderId,
+			expressType,
+			target,
+			jjnr,
+			typeDetail,
+			fjdw,
+			fjr,
+			dwdz,
+			lxfs,
+			sendway,
+			status,
+			userId,
+			reciveTime,
+			sendTime
+		)values
+		(
+			#{expressNo},
+			#{orderId},
+			#{expressType},
+			#{target},
+			#{jjnr},
+			#{typeDetail},
+			#{fjdw},
+			#{fjr},
+			#{dwdz},
+			#{lxfs},
+			#{sendway},
+			#{status},
+			#{userId},
+			#{reciveTime},
+			#{sendTime}
+		)
+	</insert>
+	
+	<!-- 批量插入附件 (但参数list传递  collection必为list)-->
+	<insert id="saveAttach"  parameterType="java.util.List">
+		insert into
+			attach_info
+		(
+			relateId,
+			realPath,
+			originalFilename,
+			fileSize,
+			url,
+			uploadTime,
+			uploader,
+			type
+		)values
+		 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+                 (
+                 #{reddemCode.expressId}, #{reddemCode.realPath},
+                 #{reddemCode.originalFilename},
+              	 #{reddemCode.fileSize},
+                 #{reddemCode.url}, #{reddemCode.uploadTime},
+                 #{reddemCode.uploader},
+                 #{reddemCode.type}
+               )
+            </foreach>
+	</insert>
+	
+	
+	<select id="findById" parameterType="pd" resultMap="maps">
+		select
+			a.id,
+			IFNULL(a.expressNo,'') expressNo,
+			IFNULL(a.expressType,'') expressType,
+			IFNULL(a.expressCom,'') expressCom,
+			IFNULL(a.target,'') target,
+			IFNULL(a.jjnr,'') jjnr,
+			IFNULL(a.typeDetail,'') typeDetail,
+			IFNULL(a.fjdw,'') fjdw,
+			IFNULL(a.fjr,'') fjr,
+			IFNULL(a.dwdz,'') dwdz,
+			IFNULL(a.lxfs,'') lxfs,
+			IFNULL(a.sendway,'') sendway,
+			IFNULL(a.status,'') status,
+			IFNULL(date_format(a.reciveTime,'%Y-%m-%d %H:%i:%s'),'') reciveTime,
+			IFNULL(date_format(a.sendTime,'%Y-%m-%d %H:%i:%s'),'') sendTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			express_info a  
+		where a.delFlag = 0  and a.id=#{id}
+	</select>
+	
+	
+	<resultMap type="pd" id="maps">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findAttach"></collection>
+		<collection property="links" column="id" select="findLinks"></collection>
+	</resultMap>
+	
+	<select id="findAttach" parameterType="Integer"  resultType="pd">
+		select * from attach_info where type=11 and relateId=#{id}  
+	</select>
+	
+	<select id="findLinks" parameterType="Integer"  resultType="pd">
+		select * from linkman_info where type=2 and relateId=#{id}  
+	</select>
+	
+	<insert id="saveAttach1"  parameterType="pd">
+	insert into
+		attach_info
+	(
+		relateId,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		uploadTime,
+		uploader,
+		type
+	)values
+	(
+		#{relateId},
+		#{realPath},
+		#{originalFilename},
+		#{fileSize},
+		#{url},
+		#{uploadTime},
+		#{uploader},
+		#{type}
+	)
+	</insert>
+	
+	<delete id="deleteAttach" parameterType="list">
+		delete from attach_info where id in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	
+	<update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime},
+					<!-- expressNo=#{expressNo}, -->
+					expressType=#{expressType},
+					target=#{target},
+					jjnr=#{jjnr},
+					typeDetail=#{typeDetail},
+					fjdw=#{fjdw},
+					fjr=#{fjr},
+					lxfs=#{lxfs},
+					sendway=#{sendway},
+						<!--status=#{status},
+					
+				 reciveTime=#{reciveTime}, -->
+				 <if test="expressCom!=null and expressCom!=''">
+				 	expressCom=#{expressCom},
+				 </if>
+				 <if test="expressNo!=null and expressNo !=''">
+				 	expressNo=#{expressNo},
+				 </if>
+				 <if test="expressMoney !=null and expressMoney !=''">
+				 	expressMoney=#{expressMoney},
+				 </if>
+					sendTime=#{sendTime}
+				where id = #{id}
+	</update>
+	
+	<update id="updateLinks" parameterType="pd">
+		update 
+			linkman_info 
+		set 
+			 editTime = #{editTime}
+				,type=2
+				,relateId=#{id}
+			where id in
+		<foreach item="item" index="index" collection="linkId" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</update>
+	
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<delete id="delteLinks" parameterType="pd">
+		delete from linkman_info 
+			where id  in
+				<foreach item="item" index="index" collection="rId1" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+	</delete>
+	
+	<insert id="saveWarnInfo" parameterType="pd">
+		insert into warn_info(userId,relateId,type,doId) values(#{userId},#{id},3,#{doId})
+	</insert>
+	
+	<delete id="deleteWarnInfo" parameterType="pd">
+		delete from warn_info where relateId=#{id} and type=3
+	</delete>
+	
+	<update id="update1" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+					<if test="expressCom !=null and expressCom!=''">
+						,expressCom=#{expressCom}
+					</if>
+					<if test="expressNo !=null and expressNo !=''">
+						,expressNo=#{expressNo}
+					</if>
+					<if test="expressMoney !=null and expressMoney !=''">
+						,expressMoney=#{expressMoney}
+					</if>
+					<if test="reciveTime!=null and reciveTime!=''">
+						,reciveTime=#{reciveTime}
+					</if>
+					<if test="status!=null and status!=''">
+						,status=#{status}
+					</if>
+				where id = #{id}
+	</update>
+	
+	<update id="doWarnInfo" parameterType="pd">
+		update warn_info set isCompleted=1 where relateId=#{id} and type=3 
+	</update>
+	
+	<select id="findServiceId" resultType="pd">
+		select  user_Id userId from sys_user  where ROLE_ID ='04fe5e23842f4b998216080bc3b61821'  limit 1;
+	</select>
+</mapper>

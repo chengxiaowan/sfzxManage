@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AboutUsMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		ABOUTUS_INFO
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		id,
+		content,
+		type,
+		status,
+		createTime,
+		editTime
+	</sql>
+
+	<sql id="insertField">
+		content,
+		type
+	</sql>
+
+	<sql id="FieldValue">
+		#{content},
+		#{type}
+	</sql>
+
+	<!-- 保存 -->
+	<insert id="updateOrSave" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		<choose>
+			<when test=" id >0 and id !=null">
+				update
+				<include refid="tableName"></include>
+				set
+				content=#{content},
+				type=#{type},
+				editTime= #{editTime}
+				where id =#{id}
+			</when>
+			<otherwise>
+				insert into
+				<include refid="tableName"></include>
+				(
+				<include refid="insertField"></include>
+				) values (
+				<include refid="FieldValue"></include>
+				)
+			</otherwise>
+		</choose>
+	</insert>
+
+	<!-- 通过ID获取信息 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where type = #{type}
+		<if test="id != null and id > 0">
+			and id = #{id}
+		</if>
+	</select>
+	
+	
+	<select id="getLogs" parameterType="pd" resultType="pd">
+		select a.userId,
+			a.flag,
+		a.type,a.qzdz,a.hzdz,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,b.name name from log_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where 1=1 and type in('编辑','删除')
+		<if test="timeStart != null and timeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{timeStart}
+		</if>
+		<if test="timeEnd != null and timeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{timeEnd}
+		</if>
+		<if test="userId != null and userId != ''"><!-- 注册时间检索 -->
+			and a.userId = #{userId}
+		</if>
+		<if test="flag != null and flag != ''"><!-- 注册时间检索 -->
+			and a.flag = #{flag}
+		</if>
+		<if test="gjc != null and gjc != ''"><!-- 注册时间检索 -->
+			and (a.qzdz LIKE CONCAT(CONCAT('%', #{gjc}),'%') or a.hzdz LIKE CONCAT(CONCAT('%', #{gjc}),'%'))
+		</if>
+		order by createTime desc 
+	</select>
+</mapper>

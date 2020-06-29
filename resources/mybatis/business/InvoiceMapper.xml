@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="InvoiceMapper">
+	<!-- 列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		SELECT
+		i.id,
+		IFNULL(c.`name`,'') customerName,
+		IFNULL(c.`taxIdentificationNumber`,'') taxIdentificationNumber,
+		IFNULL(c.`bankName`,'') bankName,
+		IFNULL(c.`companyAddress`,'') adress,
+		IFNULL(c.`provinceName`,'') provinceName,
+		IFNULL(c.`cityName`,'') cityName,
+		d.debtorName,
+		IFNULL(c.`bankNumber`,'') bankNumber,
+		IFNULL(c.`fax`,'') fax,
+		IFNULL(date_format(p.currentTime,'%Y-%m-%d %H:%i:%s'),'') currentTime,
+		<!-- IFNULL(p.currentPeriods,'') currentPeriods, -->
+		IFNULL(i.invoiceCode,'') invoiceCode,
+		IFNULL(i.invoiceContent,'') invoiceContent,
+		IFNULL(date_format(i.invoiceTime, '%Y-%m-%d'),'') invoiceTime,
+		i.invoiceType,
+		i.money,
+		i.isTax,
+		IFNULL(i.brokerage,'') brokerage,
+		IFNULL(i.remark,'') remark,
+		i.`status`,
+		IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(i.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM invoice_info i
+		LEFT JOIN customer_info c ON i.customerId = c.id
+		LEFT JOIN paymentdetail_info p ON i.relateId = p.id
+		left join
+		(select
+			h.id,
+			IFNULL(e.name,'') debtorName
+		from
+			order_info a 
+		inner join
+			debtor_info e
+			on a.debtorId=e.id
+		inner join paymentdetail_info  h
+			on a.id= h.orderId
+		where a.delFlag = 0) d
+			on i.relateId=d.id
+		WHERE i.delflag = 0
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			AND
+			(
+			c.`name` LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR
+			i.invoiceCode LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR
+			i.invoiceContent LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			OR
+			i.remark LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.invoiceType != null and pd.invoiceType != ''"><!-- 票据类型 -->
+			AND i.invoiceType = #{pd.invoiceType}
+		</if>
+		<if test="pd.isTax != null and pd.isTax != ''"><!-- 是否含税 -->
+			AND i.isTax = #{pd.isTax}
+		</if>
+		<if test="pd.status != null and pd.status != ''"><!-- 状态 -->
+			AND i.status = #{pd.status}
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 开始时间检索 -->
+			AND i.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 结束时间检索 -->
+			AND i.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		ORDER BY i.`status`,i.id desc
+	</select>
+
+	<!-- 通过ID获取信息 -->
+	<select id="findById" parameterType="pd" resultMap="map1">
+		<if test="id != null and id > 0">
+			SELECT
+		i.id,
+		IFNULL(c.`name`,'') customerName,
+		IFNULL(c.`taxIdentificationNumber`,'') taxIdentificationNumber,
+		IFNULL(c.`bankName`,'') bankName,
+		IFNULL(c.`companyAddress`,'') adress,
+		IFNULL(c.`provinceName`,'') provinceName,
+		IFNULL(c.`cityName`,'') cityName,
+		IFNULL(c.`bankNumber`,'') bankNumber,
+		IFNULL(c.`fax`,'') fax,
+		IFNULL(date_format(p.currentTime,'%Y-%m-%d %H:%i:%s'),'') currentTime,
+		<!-- IFNULL(p.currentPeriods,'') currentPeriods, -->
+		IFNULL(i.invoiceCode,'') invoiceCode,
+		IFNULL(i.invoiceContent,'') invoiceContent,
+		IFNULL(date_format(i.invoiceTime, '%Y-%m-%d'),'') invoiceTime,
+		i.invoiceType,
+		i.money,
+		i.isTax,
+		IFNULL(i.brokerage,'') brokerage,
+		IFNULL(i.remark,'') remark,
+		i.`status`,
+		IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(i.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM invoice_info i
+		LEFT JOIN customer_info c ON i.customerId = c.id
+		LEFT JOIN paymentdetail_info p ON i.relateId = p.id
+			WHERE i.id = #{id}
+		</if>
+	</select>
+	
+	
+	<resultMap type="pd" id="map1">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findAttach"></collection>
+	</resultMap>
+	
+	<select id="findAttach" parameterType="Integer"  resultType="pd">
+		select * from attach_info where type=12 and relateId=#{id}  
+	</select>
+	
+	
+	<!-- 检查是否有重复数据 -->
+	<select id="findByInvoiceCode" parameterType="pd" resultType="pd">
+		<if test="invoiceCode != null and invoiceCode != ''">
+			select 1 from invoice_info where delflag=0 and invoiceCode = #{invoiceCode}
+			<if test="id != null and id > 0">
+				and id &lt;&gt; #{id}
+			</if>
+			limit 1
+		</if>
+	</select>
+
+	<!-- 新增或修改 -->
+	<insert id="saveOrUpdate" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		<choose>
+			<when test="id != null and id > 0">
+				update invoice_info set editTime = current_timestamp(),`status` = 1
+				<if test="invoiceCode != null and invoiceCode != ''">
+					,invoiceCode = #{invoiceCode}
+				</if>
+				<if test="invoiceContent != null and invoiceContent != ''">
+					,invoiceContent = #{invoiceContent}
+				</if>
+				<if test="invoiceTime != null and invoiceTime != ''">
+					,invoiceTime = #{invoiceTime}
+				</if>
+				<if test="invoiceType != null and invoiceType != ''">
+					,invoiceType = #{invoiceType}
+				</if>
+				<if test="money != null and money != ''">
+					,money = #{money}
+				</if>
+				<if test="isTax != null and isTax != ''">
+					,isTax = #{isTax}
+				</if>
+				<if test="brokerage != null and brokerage != ''">
+					,brokerage = #{brokerage}
+				</if>
+				<!-- <if test="remark != null and remark != ''"> -->
+					,remark = #{remark}
+				<!-- </if> -->
+				where id = #{id}
+			</when>
+			<otherwise>
+				insert into invoice_info (customerId,relateId) values (#{customerId},#{relateId})
+			</otherwise>
+		</choose>
+	</insert>
+
+	<!-- 批量删除 -->
+	<delete id="delete" parameterType="String">
+		update invoice_info set delFlag = 1 where id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<update id="updateTask" parameterType="pd">
+		update warn_info set isCompleted=1 where relateId = #{id} and type=2
+	</update>
+</mapper>

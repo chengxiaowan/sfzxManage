@@ -1,0 +1,1737 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="OrderMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		order_info
+	</sql>
+
+	<!-- 合同列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+			select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			h.totalMoney totalMoney,
+			case when a.debtAmount-IFNULL(h.totalMoney,0)>=0 then a.debtAmount-IFNULL(h.totalMoney,0) 
+			 else 0 end syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(k.signingTime,'%Y-%m-%d %H:%i:%s'),'') signingTime,
+			IFNULL(date_format(k.endTime,'%Y-%m-%d %H:%i:%s'),'') endTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left JOIN
+			contract_info k
+		 on k.id=a.contractId
+		where a.delFlag = 0 
+		<if test="pd.type != null and pd.type != ''">
+			and a.type = #{pd.type}
+		</if>
+		<if test="pd.status != null ">
+			and a.status in
+			<foreach item="item" index="index" collection="pd.status" open="(" separator="," close=")">
+				'${item}'
+			</foreach>
+		</if>
+		<if test="pd.status1 != null and pd.status1 != ''">
+			and a.status =#{pd.status1}
+		</if>
+		<if test="pd.isFiled != null and pd.isFiled != ''">
+			and a.isFiled =#{pd.isFiled}
+		</if>
+		<if test="pd.flag != null and pd.flag != ''">
+			and a.id not in (SELECT orderId FROM orderreport_info WHERE date_format(createTime,'%Y-%m')=date_format(now(),'%Y-%m'))
+		</if>
+		<if test="pd.orderIds != null ">
+			and a.id not in
+			<foreach item="item" index="index" collection="pd.orderIds" open="(" separator="," close=")">
+				'${item}'
+			</foreach>
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{pd.createTimeEnd}
+		</if>
+		<if test="pd.startTime != null and pd.startTime != ''"><!-- 注册时间检索 -->
+			and k.signingTime &gt;= #{pd.startTime}
+		</if>
+		<if test="pd.endTime != null and pd.endTime != ''"><!-- 注册时间检索 -->
+			and k.signingTime &lt;= #{pd.endTime}
+		</if>
+		<if test="pd.saleId!=null and pd.saleId !=''">
+			and a.saleId = #{pd.saleId} 
+		</if>
+		order by c.name is not null,a.id desc
+	</select>
+	
+	<select id="listAll" parameterType="pd" resultType="pd">
+			select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			case when a.lawCommissionRate is null then ''
+				 when a.lawCommissionRate = '' then '' 
+			else CONCAT(a.lawCommissionRate*(case when a.susongdiscount is null then 100
+				 when a.susongdiscount = '' then 100 else a.susongdiscount end)/100,'%') end lawCommissionRate,
+			g.id totalId,
+			f.id filedId,
+			IFNULL(b.name,'') saleName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			case when a.commissionRate is null then ''
+				 when a.commissionRate = '' then '' 
+			else CONCAT(a.commissionRate*(case when a.discount is null then 100
+				 when a.discount = '' then 100 else a.discount end)/100,'%') end commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			IFNULL(a.lastContactTime,'') lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			IFNULL(h.totalMoney,0) totalMoney,
+			case when a.debtAmount-IFNULL(h.totalMoney,0)>=0 then a.debtAmount-IFNULL(h.totalMoney,0) 
+			 else 0 end syMoney,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,'') isFiled,
+			IFNULL(a.status,'') status,
+			IFNULL(a.type,'') type,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d'),'') createTime,
+			IFNULL(date_format(k.signingTime,'%Y-%m-%d'),'') signingTime,
+			IFNULL(date_format(k.endTime,'%Y-%m-%d'),'') endTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id and d.delflag=0 
+		left join
+			debtor_info e
+			on a.debtorId=e.id and e.delflag=0 
+		left join 
+			report_info g
+			on a.id = g.orderId and g.type in(1,2)
+		left join 
+			report_info f
+			on a.id = f.orderId and f.type=3
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info
+			 <if test="flag==3">
+			 where 1=1 
+				<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+					and currentTime &gt;= #{startTime}
+				</if>
+				<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+					and currentTime &lt;= #{endTime}
+				</if>
+			</if>
+			 group by orderId) h
+			on a.id= h.orderId
+		left JOIN
+			contract_info k
+			on k.id=a.contractId
+		where a.delFlag = 0 
+		<if test="type != null and type != ''">
+			and a.type = #{type}
+		</if>
+		<if test="customerId !=null and customerId !=''">
+			and a.customerId= #{customerId}
+		</if>
+		<if test="status1 != null and status1 != ''">
+			and a.status =#{status1}
+		</if>
+		<if test="isFiled != null and isFiled != ''">
+			and a.isFiled =#{isFiled}
+		</if>
+		<if test="keywords != null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			d.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			e.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			b.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			c.name LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)
+		</if>
+		<if test="runnerId !=null and runnerId !=''">
+			and a.runnerId=#{runnerId}
+		</if>
+		<if test="isRunDirector != null and isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe')
+		</if>
+		<if test="wtdd != null and wtdd != ''"><!-- 注册时间检索 -->
+			 and a.status in(0,3,4)
+		</if>
+		<if test="currentMonth != null and currentMonth != ''"><!-- 注册时间检索 -->
+			and date_format(a.createTime,'%Y-%m') = #{currentMonth} 
+		</if>
+		<if test="createTimeStart != null and createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.createTime &gt;= #{createTimeStart}
+		</if>
+		<if test="createTimeEnd != null and createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.createTime &lt;= #{createTimeEnd}
+		</if>
+		<if test="flag !=3 and flag !=2">
+			<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+				and k.signingTime &gt;= #{startTime}
+			</if>
+			<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+				and k.signingTime &lt;= #{endTime}
+			</if>
+		</if>
+		<if test="flag ==2 ">
+			<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+				and a.createTime &gt;= #{startTime}
+			</if>
+			<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+				and a.createTime &lt;= #{endTime}
+			</if>
+		</if>
+		
+		<if test="saleId !=null and saleId !=''">
+			and a.saleId = #{saleId} 
+		</if>
+		<if test="dxswgwId !=null and dxswgwId !=''">
+			and a.saleId = #{dxswgwId} and a.debtAmount &gt;35000
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	
+	<select id="listAll1" parameterType="pd" resultType="pd">
+		select
+				IFNULL(a.debtAmount,'') debtAmount
+			from
+				order_info a 
+				inner join 
+				paymentdetail_info f
+			on a.id =f.orderId 
+			left join 
+				sys_user b
+				on a.saleId=b.USER_ID
+			left join 	
+				sys_user c
+				on a.runnerId =c.USER_ID
+			left join 	
+				customer_info d
+				on a.customerId =d.id
+			left join
+			debtor_info e
+				on a.debtorId=e.id
+			where a.delflag=0 and f.delflag=0 
+			<if test="startTime != null and startTime != ''"><!-- 注册时间检索 -->
+				and f.currentTime &gt;= #{startTime}
+			</if>
+			<if test="endTime != null and endTime != ''"><!-- 注册时间检索 -->
+				and f.currentTime &lt;= #{endTime}
+			</if>
+			<if test="saleId !=null and saleId !=''">
+				and a.saleId = #{saleId} 
+			</if>
+			<if test="customerId !=null and customerId !=''">
+				and a.customerId = #{customerId} 
+			</if>
+			<if test="provinceName !=null and provinceName !=''">
+				and d.provinceName = #{provinceName}
+			</if>
+			group by a.id
+			order by a.id desc
+	</select>
+	
+	<select id="showCountryData" parameterType="pd" resultType="pd">
+		select * from region_info where parentId in (select id from region_info where parentId=#{parentId})
+	</select>
+	
+	<select id="showAllArea" parameterType="java.util.List" resultType="pd">
+		select * from region_info where parentId in 
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+	
+	<update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+				<if test="userId != null and userId != ''">
+					,saleId = #{userId}
+				</if>
+				<if test="customerId != null and customerId != ''">
+					,customerId = #{customerId}
+				</if>
+				<if test="contractId != null and contractId != ''">
+					,contractId = #{contractId}
+				</if>
+				<if test="orderNo != null and orderNo != ''">
+					,orderNo = #{orderNo}
+				</if>
+				<if test="debtAmount != null and debtAmount != ''">
+					,debtAmount = #{debtAmount}
+				</if>
+				<if test="commissionRate != null and commissionRate != ''">
+					,commissionRate = #{commissionRate}
+				</if>
+				<if test="ageOfDebt != null and ageOfDebt != ''">
+					,ageOfDebt = #{ageOfDebt}
+				</if>
+				<!-- <if test="lastPaymentDate != null and lastPaymentDate != ''">   -->
+					,lastPaymentDate = #{lastPaymentDate} 
+				<!-- </if> -->
+				<if test="debtType != null and debtType != ''">
+					,debtType = #{debtType}
+				</if>
+				<!-- <if test="disputedReasons != null and disputedReasons != ''"> -->
+					,disputedReasons = #{disputedReasons}
+				<!-- 	</if> -->
+				<!-- <if test="otherdebtDetail != null and otherdebtDetail != ''"> -->
+					,otherdebtDetail = #{otherdebtDetail}
+				<!-- </if> -->
+				<!-- <if test="lastContactTime != null and lastContactTime != ''"> -->
+					,lastContactTime = #{lastContactTime}
+					,cType = #{cType}
+					,discount = #{discount}
+					,susongdiscount=#{susongdiscount}
+					,lawCommissionRate=#{lawCommissionRate} 
+					,fixedMoney = #{fixedMoney}
+				<!-- </if> -->
+				<if test="isDispute != null and isDispute != ''">
+					,isDispute = #{isDispute}
+				</if>
+				<if test="nonPayReasons != null and nonPayReasons != ''">
+					,nonPayReasons = #{nonPayReasons}
+				</if>
+				<!-- <if test="collectHistory != null and collectHistory != ''"> -->
+					,collectHistory = #{collectHistory} 
+				<!-- </if> -->
+				<!-- <if test="othersRequest != null and othersRequest != ''"> -->
+					,othersRequest = #{othersRequest}
+				<!-- </if> -->
+				<!-- <if test="provinceName != null and provinceName != ''">
+					,provinceName = #{provinceName}
+				</if>
+				<if test="cityName != null and cityName != ''">
+					,cityName = #{cityName}
+				</if> -->
+				<if test="addressDetail != null and addressDetail != ''">
+					,addressDetail = #{addressDetail}
+				</if>
+				<!-- <if test="orederAttachType != null and orederAttachType != ''"> -->
+					,orederAttachType = #{orederAttachType}
+				<!-- </if> -->
+				<if test="isFiled != null and isFiled != ''">
+					,isFiled = #{isFiled}
+				</if>
+				<if test="status != null and status != ''">
+					,status = #{status}
+				</if>
+				<if test="type != null and type != ''">
+					,type = #{type}
+				</if>
+				<if test="orderPlacement != null and orderPlacement != ''">
+					,orderPlacement = #{orderPlacement} 
+				</if>
+				where id = #{id}
+	</update>
+	
+	
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<!-- 债务人保存 -->
+	<insert id="saveDebtor"  parameterType="pd" useGeneratedKeys="true" keyProperty="debtorId">
+		insert into  
+				debtor_info(
+					name,
+					address,
+					postCode,
+					fax,
+					mobilePhone,
+					otherContract,
+					provinceName,
+					cityName,
+					status
+				)  values(
+					#{debtorName},
+					#{debtorAddress},
+					#{debtorPostcode},
+					#{debtorFax},
+					#{debtorMobilePhone},
+					#{debtorOtherContract},
+					#{provinceName},
+					#{cityName},
+					#{debtorStatus}
+				)
+	</insert>
+	
+	<update id="updateDebtor" parameterType="pd">
+			update debtor_info
+			set 
+				name=#{debtorName},
+				address=#{debtorAddress},
+				postCode=#{debtorPostcode},
+				fax=#{debtorFax},
+				provinceName=#{provinceName},
+				cityName=#{cityName},
+				mobilePhone=#{debtorMobilePhone},
+				otherContract=#{debtorOtherContract},
+				status=#{debtorStatus}
+			where id=#{debtorId} 
+	</update>
+	
+	
+	<update id="updateDebtor1" parameterType="pd">
+			update debtor_info
+			set 
+					editTime=#{editTime}
+				<if test="debtorName !=null">
+					,name=#{debtorName}
+				</if>
+				<if test="debtorAddress !=null">
+					,address=#{debtorAddress}
+				</if>
+				<if test="debtorPostcode !=null ">
+					,postCode=#{debtorPostcode}
+				</if>
+				<if test="debtorFax !=null ">
+					,fax=#{debtorFax}
+				</if>
+				<if test="provinceName1 !=null">
+					,provinceName=#{provinceName1}
+				</if>
+				<if test="cityName1 !=null">
+					,cityName=#{cityName1}
+				</if>
+				<if test="debtorMobilePhone !=null">
+					,mobilePhone=#{debtorMobilePhone}
+				</if>
+				<if test="debtorOtherContract!=null">
+					,otherContract=#{debtorOtherContract}
+				</if>
+				<if test="debtorStatus !=null">
+					,status=#{debtorStatus}
+				</if>
+			where id=#{debtorId} 
+	</update>
+	
+	<!-- 债务人保存 -->
+	<insert id="saveDebtorAndCustomer"  parameterType="pd" useGeneratedKeys="true" keyProperty="customerId">
+		insert into  
+				customer_info(
+					name,
+					<if test="status!=null and status!=''">
+					status,
+					</if>
+					otherContract,
+					mobilePhone,
+					fax,
+					postcode,
+					companyAddress,
+					bankNumber
+				)  values(
+					#{name},
+					<if test="status!=null and status!=''">
+						#{status},
+					</if>
+					#{otherContract},
+					#{mobilePhone},
+					#{fax},
+					#{postcode},
+					#{companyAddress},
+					#{bankNumber}
+				)
+	</insert>
+	
+	
+	<insert id="saveAttach"  parameterType="java.util.List">
+		insert into
+			attach_info
+		(
+			orderId,
+			relateId,
+			realPath,
+			originalFilename,
+			fileSize,
+			url,
+			type,
+			uploadTime,
+			uploader
+		)values
+		 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+                 (
+                 #{reddemCode.orderId},#{reddemCode.relateId}, #{reddemCode.realPath},
+                 #{reddemCode.originalFilename},
+              	 #{reddemCode.fileSize},
+                 #{reddemCode.url}, 
+                 #{reddemCode.type},
+                 #{reddemCode.uploadTime},
+                 #{reddemCode.uploader}
+               )
+            </foreach>
+	</insert>
+	
+		<insert id="saveAttach1"  parameterType="pd">
+			insert into
+				attach_info
+			(
+				orderId,
+				relateId,
+				realPath,
+				originalFilename,
+				fileSize,
+				url,
+				uploadTime,
+				uploader,
+				type
+			)values
+			(
+				#{relateId},
+				0,
+				#{realPath},
+				#{originalFilename},
+				#{fileSize},
+				#{url},
+				#{uploadTime},
+				#{uploader},
+				1
+			)
+		</insert>
+		
+		
+		<insert id="saveProcess"  parameterType="pd" useGeneratedKeys="true" keyProperty="relateId">
+		insert into
+			process_info
+		(
+			callUuid,
+			runnerId,
+			orderId,
+			link,
+			remark,
+			gjStatus,
+			xcgjTime,
+			createTime
+		)values
+		(
+			#{callUuid},
+			#{runnerId},
+			#{orderId},
+			#{link},
+			#{remark},
+			#{gjStatus},
+			#{xcgjTime},
+			#{createTime}
+		)
+		</insert>
+			
+	<!-- 联系人保存 -->
+	<insert id="saveLinksAndOrder"  parameterType="pd" >
+			insert into  
+					order_linkman_info(
+						orderId,
+						linkmanId,
+						type 
+					)  values
+						<if test="flag==0">
+							 <foreach collection ="linkId1" item="item" index="index" separator =",">
+				                 (
+				               	 #{orderId},
+				                 #{item},
+				                 0
+				               )
+				            </foreach>
+						</if>
+						<if test="flag==1">
+							 <foreach collection ="linkId2" item="item" index="index" separator =",">
+				                 (
+				               	 #{orderId},
+				                 #{item},
+				                 1
+				               )
+				            </foreach>
+						</if>
+						<if test="flag==2">
+							 <foreach collection ="linkId3" item="item" index="index" separator =",">
+				                 (
+				               	 #{orderId},
+				                 #{item},
+				                 2
+				               )
+				            </foreach>
+						</if>
+						<if test="flag==3">
+							 <foreach collection ="linkId4" item="item" index="index" separator =",">
+				                 (
+				               	 #{orderId},
+				                 #{item},
+				                 3
+				               )
+				            </foreach>
+						</if>
+				
+	</insert>
+	
+	
+	<update id="updatLinksAndOrder" parameterType="pd">
+		update 
+			order_linkman_info
+		set 
+			<if test="flag==0">
+				linkmanId=#{linkId1}
+			where id=#{rId1}
+			</if>
+			<if test="flag==1">
+				linkmanId=#{linkId2}
+			where id=#{rId2}
+			</if>
+			<if test="flag==2">
+				linkmanId=#{linkId3}
+			where id=#{rId3}
+			</if>
+			<if test="flag==3">
+				linkmanId=#{linkId4}
+			where id=#{rId4}
+			</if>
+	</update>
+	
+	<delete id="delteLinksAndOrder" parameterType="pd">
+		delete from order_linkman_info where 1=1 and orderId=#{orderId}
+			<if test="flag==0">
+				and type=0
+			 	and linkmanId in
+					<foreach item="item" index="index" collection="rId1" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			</if>
+			<if test="flag==1">
+				and type=1
+				and linkmanId in
+					<foreach item="item" index="index" collection="rId2" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			</if>
+			<if test="flag==2">
+					and type=2
+				 and linkmanId in
+					<foreach item="item" index="index" collection="rId3" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			</if>
+			<if test="flag==3">
+				 and type=3
+				 and linkmanId in
+					<foreach item="item" index="index" collection="rId4" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+			</if>
+	</delete>
+	
+	<!-- 保存案件信息 -->
+	<insert id="save" parameterType="pd" useGeneratedKeys="true" keyProperty="orderId">
+		insert into
+		<include refid="tableName"></include>
+		(
+			orderNo,
+			saleId,
+			customerId,
+			cType,
+			discount,
+			fixedMoney,
+			contractId,
+			debtorId,
+			debtAmount,
+			commissionRate,
+			ageOfDebt,
+			lastPaymentDate,
+			debtType,
+			otherdebtDetail,
+			lastContactTime,
+			isDispute,
+			disputedReasons,
+			nonPayReasons,
+			collectHistory,
+			othersRequest,
+			<!-- provinceName,
+			cityName, -->
+			addressDetail,
+			orderPlacement,
+			orederAttachType,
+			type,
+			status
+		)values(
+			#{orderNo},
+			#{userId},
+			#{customerId},
+			#{cType},
+			#{discount},
+			#{fixedMoney},
+			#{contractId},
+			#{debtorId},
+			#{debtAmount},
+			#{commissionRate},
+			#{ageOfDebt},
+			#{lastPaymentDate},
+			#{debtType},
+			#{otherdebtDetail},
+			#{lastContactTime},
+			#{isDispute},
+			#{disputedReasons},
+			#{nonPayReasons},
+			#{collectHistory},
+			#{othersRequest},
+			<!-- #{provinceName},
+			#{cityName}, -->
+			#{addressDetail},
+			#{orderPlacement},
+			#{orederAttachType},
+			#{type},
+			#{status}
+		)	
+	</insert>
+	
+	<select id="findById" parameterType="pd" resultMap="maps">
+		select
+			a.id,
+			a.saleId,
+			a.runnerId,
+			a.customerId,
+			a.debtorId,
+			a.cType,
+			a.discount,
+			a.susongdiscount,
+			a.fixedMoney,
+			a.lawCommissionRate,
+			f.id cityId1,
+			case when l.id is null then g.id else l.id end contractId,
+			case when l.id is null then g.contractNo else l.contractNo end contractNo,
+			case when l.id is null then g.debtorName else l.debtorName end c_debtorName,
+			case when l.id is null then g.price else l.price end c_price,
+			case when l.id is null then g.commissionRate else l.commissionRate end c_commissionRate,
+			
+			<!-- IFNULL(h.id,g.id) contractId
+			IFNULL(h.id,g.contractNo) contractNo,
+			IFNULL(h.id,g.debtorName) c_debtorName,
+			IFNULL(h.id,g.price) c_price,
+			IFNULL(h.id,g.commissionRate) c_commissionRate, -->
+			IFNULL(b.name,'') userName,
+			IFNULL(c.name,'') runnerName,
+			IFNULL(d.name,'') customerName,
+			IFNULL(d.fax,'') customerFax,
+			IFNULL(d.postCode,'') customerPostCode,
+			IFNULL(d.bankName,'') customerBankAccountName,
+			IFNULL(d.bankNumber,'') customerBankNumber,
+			IFNULL(d.companyAddress,'') customerAddress,
+			IFNULL(e.name,'') debtorName,
+			IFNULL(e.address,'') debtorAddress,
+			IFNULL(e.postCode,'') debtorPostcode,
+			IFNULL(e.fax,'') debtorFax,
+			IFNULL(e.mobilePhone,'') debtorMobilePhone,
+			IFNULL(e.otherContract,'') debtorOtherContract,
+			IFNULL(e.status,'') debtorStatus,
+			IFNULL(a.orderNo,'') orderNo,
+			IFNULL(a.debtAmount,'') debtAmount,
+			IFNULL(a.commissionRate,'') commissionRate,
+			IFNULL(a.ageOfDebt,'') ageOfDebt,
+			IFNULL(a.lastPaymentDate,'') lastPaymentDate,
+			IFNULL(a.debtType,0) debtType,
+			IFNULL(a.otherdebtDetail,'') otherdebtDetail,
+			a.lastContactTime,
+			IFNULL(a.isDispute,0) isDispute,
+			IFNULL(a.nonPayReasons,'') nonPayReasons,
+			IFNULL(a.collectHistory,'') collectHistory,
+			IFNULL(a.othersRequest,'') othersRequest,
+			IFNULL(d.provinceName,'') provinceName,
+			IFNULL(a.disputedReasons,'') disputedReasons,
+			IFNULL(d.cityName,'') cityName,
+			IFNULL(a.orederAttachType,'') orederAttachType,
+			IFNULL(a.addressDetail,'') addressDetail,
+			IFNULL(a.isFiled,0) isFiled,
+			IFNULL(a.status,0) status,
+			IFNULL(a.type,0) type,
+			IFNULL(i.gjStatus,0) gjStatus,
+			h.totalMoney,
+			a.debtAmount-IFNULL(h.totalMoney,0) syMoney,
+			IFNULL(e.provinceName,'') provinceName1,
+			IFNULL(e.cityName,'') cityName1,
+			IFNULL(date_format(a.orderPlacement,'%Y-%m-%d'),'') orderPlacement,
+			<!-- IFNULL(date_format(j.time,'%Y-%m-%d'),'') time,
+			IFNULL(j.remark,'') remark, -->
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(i.createTime,'%Y-%m-%d %H:%i:%s'),'') gjTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			order_info a 
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+			debtor_info e
+			on a.debtorId=e.id
+		left join 
+			region_info f
+		on f.regionName=e.cityName and f.parentId =(select a.id from region_info a,debtor_info b,order_info c where a.regionName=b.provinceName and c.debtorId=b.id and c.id=#{id})
+		left join
+			contract_info g
+			on a.contractId =g.id and g.type=0
+		left join
+			(select case when b. NAME is null then a.debtorName else b.name end debtorName,a.id,a.commissionRate,a.price,a.contractNo from contract_info a left join debtor_info b on b.id=a.debtorId and a.type=1) l
+			on a.contractId =l.id 
+		left join
+			(select sum(currentMoney) totalMoney,orderId from paymentdetail_info group by orderId) h
+			on a.id= h.orderId
+		left join 
+			(SELECT a.* from process_info a 
+		inner join(
+		select max(createTime) createTime,orderId from process_info GROUP BY orderId) b
+		on a.orderid=b.orderid and a.createTime=b.createTime) i
+			on a.id=i.orderId
+		<!-- left join
+			call_info j
+			on a.id =g.orderId -->
+		where a.delFlag = 0 and a.id=#{id} 
+	</select>
+	
+	<resultMap type="pd" id="maps">
+		<id property="id" column="id"/>
+		<result property="debtorId" column="debtorId"/>
+		<result property="customerId" column="customerId"/>
+		<collection property="linkMan1" column="{id1=debtorId,id2=id}"  select="findLinkMan1"></collection>
+		<collection property="linkMan2" column="{id1=debtorId,id2=id}" select="findLinkMan2"></collection>
+		<collection property="linkMan3" column="{id1=customerId,id2=id}" select="findLinkMan3"></collection>
+		<collection property="linkMan4" column="{id1=customerId,id2=id}" select="findLinkMan4"></collection>
+		<collection property="linkMan5" column="{id1=customerId,id2=id}" select="findLinkMan5"></collection>
+		<collection property="linkMan6" column="{id1=debtorId,id2=id}" select="findLinkMan6"></collection>
+		<collection property="attachs" column="id" select="findAttach"></collection>
+		<collection property="callInfo" column="id" select="findCallInfo"></collection>
+		<collection property="expressInfo" column="id" select="findExpressInfo"></collection>
+		<collection property="logsInfo" column="id" select="findLogsInfo"></collection>
+	</resultMap>
+	
+	<select id="findLogsInfo" parameterType="Integer"  resultType="pd">
+		select a.userId,a.type,a.qzdz,a.hzdz,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,b.name name from log_info a
+		inner join
+		sys_user b
+		on a.userId=b.user_Id
+		where a.saleCustomerId=#{id}  and a.flag=4
+	</select>
+	
+	<select id="findAttach" parameterType="Integer"  resultType="pd">
+		SELECT
+		id,
+		realPath,
+		originalFilename,
+		fileSize,
+		url,
+		IFNULL(date_format(uploadTime,'%Y-%m-%d %H:%i:%s'),'') uploadTime,
+		uploader,
+		CASE type
+			WHEN 0 THEN
+			'合同'
+			WHEN 1 THEN
+			'案件'
+			WHEN 2 THEN
+			'诉讼/仲裁'
+			WHEN 3 THEN
+			'回款明细'
+			WHEN 4 THEN
+			'案件报告'
+			WHEN 5 THEN
+			'律师函'
+			WHEN 6 THEN
+			'案件关闭'
+			WHEN 7 THEN
+			'案件结案'
+			WHEN 8 THEN
+			'案件交接'
+			WHEN 9 THEN
+			'案件归档'
+			WHEN 10 THEN
+			'案件跟进'
+			WHEN 11 THEN
+			'快递'
+				WHEN 12 THEN
+			'发票'
+				WHEN 13 THEN
+			'销售动态'
+				WHEN 14 THEN
+			'潜在客户'
+			ELSE
+			'未知'
+			END type,
+		IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+		IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		FROM attach_info WHERE delFlag = 0 AND orderId=#{id} order by id desc
+	</select>
+	<select id="findLinkMan1" parameterType="HashMap"  resultType="pd">
+		select a.id linkId1,b.id rId1,IFNULL(a.name,'') zqrName,IFNULL(a.mobilePhone,'') zqrMobilePhone,IFNULL(a.landline,'') zqrLandline,IFNULL(a.postion,'') zqrPostion,a.email zqrEmail,a.fax zqrFax,a.remark zqrRemark from linkman_info a,order_linkman_info b where b.type=0 and a.relateId=#{id1} and a.id=b.linkmanId and a.delflag=0 and b.orderId=#{id2}
+	</select>
+	<select id="findLinkMan2" parameterType="HashMap"  resultType="pd">
+		select a.id linkId2,b.id rId2,IFNULL(a.name,'') fzrName,IFNULL(a.mobilePhone,'') fzrMobilePhone,a.email fzrEmail,a.fax fzrFax,a.remark fzrRemark,IFNULL(a.landline,'') fzrLandline,IFNULL(a.postion,'') fzrPostion from linkman_info a,order_linkman_info b where b.type=1 and a.relateId=#{id1} and a.id=b.linkmanId  and a.delflag=0 and b.orderId=#{id2}
+	</select>
+	<select id="findLinkMan3" parameterType="HashMap"  resultType="pd">
+		select a.id linkId3,b.id rId3,IFNULL(a.name,'') ajzqrName,IFNULL(a.mobilePhone,'') ajzqrMobilePhone,IFNULL(a.landline,'') ajzqrLandline,IFNULL(a.postion,'') ajzqrPostion from linkman_info a,order_linkman_info b where b.type=2 and a.relateId=#{id1}  and a.id=b.linkmanId and a.delflag=0 and b.orderId=#{id2}
+	</select>
+	<select id="findLinkMan4" parameterType="HashMap"  resultType="pd">
+		select a.id linkId4,b.id rId4,IFNULL(a.name,'') hbdxrName,IFNULL(a.mobilePhone,'') hbdxrMobilePhone,IFNULL(a.landline,'') hbdxrLandline,IFNULL(a.postion,'') hbdxrPostion from linkman_info a,order_linkman_info b where b.type=3 and a.relateId=#{id1}  and a.id=b.linkmanId and a.delflag=0 and b.orderId=#{id2}
+	</select>
+	<select id="findLinkMan5" parameterType="HashMap"  resultType="pd">
+		select a.id,a.name,a.mobilePhone,a.landline,a.postion from linkman_info a,customer_info b where a.relateId=b.id and b.id=#{id1}  and a.type=0
+	</select>
+	<select id="findLinkMan6" parameterType="HashMap"  resultType="pd">
+		select a.id,a.name,a.mobilePhone,a.landline,a.postion,a.email,a.fax,a.remark from linkman_info a,debtor_info b where a.relateId=b.id and b.id=#{id1}  and a.type=1
+	</select>
+	
+	<select id="findCallInfo" parameterType="HashMap"  resultType="pd">
+		select IFNULL(date_format(j.time,'%Y-%m-%d %H:%i:%s'),'') time,j.id,j.flag,j.userId,
+			IFNULL(j.remark,'') remark from call_info j where j.orderId=#{id} order by j.time desc 
+	</select>
+	
+	
+	<select id="findExpressInfo" parameterType="HashMap"  resultType="pd">
+		select
+			a.id,
+			a.orderId,
+			IFNULL(a.expressCom,'') expressCom,
+			IFNULL(a.expressNo,'') expressNo,
+			IFNULL(a.expressType,'') expressType,
+			IFNULL(a.target,'') target,
+			IFNULL(a.jjnr,'') jjnr,
+			IFNULL(a.typeDetail,'') typeDetail,
+			IFNULL(a.fjdw,'') fjdw,
+			IFNULL(a.fjr,'') fjr,
+			IFNULL(a.dwdz,'') dwdz,
+			IFNULL(a.lxfs,'') lxfs,
+			IFNULL(a.sendway,'') sendway,
+			IFNULL(a.status,'') status,
+			IFNULL(date_format(a.reciveTime,'%Y-%m-%d %H:%i:%s'),'') reciveTime,
+			IFNULL(date_format(a.sendTime,'%Y-%m-%d %H:%i:%s'),'') sendTime,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			express_info a  
+			where a.orderId=#{id}
+	</select>
+	
+	<update id="updateLinks" parameterType="pd">
+		update 
+			linkman_info 
+		set 
+			 editTime = #{editTime}
+			<if test="flag==0">
+				,type=1
+				,relateId=#{debtorId}
+			where id in
+				<foreach item="item" index="index" collection="linkId1" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="flag==1">
+				,type=1
+				,relateId=#{debtorId}
+			where id in
+				<foreach item="item" index="index" collection="linkId2" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="flag==2">
+				,relateId=#{customerId}
+			where id in
+				<foreach item="item" index="index" collection="linkId3" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="flag==3">
+				,relateId=#{customerId}
+			where id in
+				<foreach item="item" index="index" collection="linkId4" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+	</update>
+	
+	<delete id="delteLinks" parameterType="pd">
+		delete from linkman_info 
+			<if test="flag==0">
+			where id  in
+				<foreach item="item" index="index" collection="rId1" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="flag==1">
+			where id in
+				<foreach item="item" index="index" collection="rId2" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+	</delete>
+	
+<!-- 	<update id="updateGuiDang" parameterType="pd">
+		update 
+			<include refid="tableName"></include>
+			set  isFiled =1
+		where id = #{id}  	
+	</update> -->
+	
+	<update id="updateRun" parameterType="pd">
+		update 
+			<include refid="tableName"></include>
+			set  runnerId =#{runnerId},
+				 runTime=#{runTime}
+		where id in
+			<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+				#{item}
+			</foreach> 	
+	</update>
+	
+	<insert id="saveTotal" parameterType="pd" useGeneratedKeys="true" keyProperty="totalId">
+		insert into 
+			report_info(orderId,title,content,type)
+			<if test="type==5">
+			values(#{orderId},#{title},#{content},1)
+			</if>
+			<if test="type==6">
+			values(#{orderId},#{title},#{content},2)
+			</if>
+			<if test="type==8">
+			values(#{orderId},#{title},#{content},3)
+			</if>
+	</insert>
+	
+	<update id="updateTotal" parameterType="pd">
+		update 
+			<include refid="tableName"></include>
+			set editTime = #{editTime}
+			<if test="type==5">
+				  ,status =2
+			</if>
+			<if test="type==6">
+				  ,status =1
+			</if>
+			<if test="type==8">
+				  ,isFiled =1
+			</if>
+		where id = #{orderId}  	
+	</update>
+	
+	
+	<select id="findTotalById" resultMap="attachMap">
+		select id,
+			   title,
+			   content
+			from report_info
+			where id=#{id} 	   
+	</select>
+	
+	<resultMap type="pd" id="attachMap">
+		<id property="id" column="id"/>
+		<collection property="attachs" column="id" select="findallAttach"></collection>
+	</resultMap>
+	
+	<select id="findallAttach" parameterType="Integer" resultType="pd">
+		select * from attach_info where orderId= #{id} and type in(5,6,8) order by id desc
+	</select>
+	
+	
+	<select id="findByOrderNo" parameterType="pd" resultType="pd">
+		select * from 
+			<include refid="tableName"></include>
+		where orderNo=#{orderNo}
+		<if test="id!='' and id!= null">
+			and id &lt;&gt; #{id}
+		</if>
+		limit 1
+	</select>
+	
+	<select id="findReportInfo" parameterType="pd" resultMap="attach">
+			<!-- 案件报告 -->
+			SELECT id,orderId,title,`status`,reportType,IFNULL(remark,'') remark,IFNULL(content,'') content,IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,IFNULL(date_format(editTime,'%Y-%m-%d %H:%i:%s'),'') editTime FROM
+			`orderreport_info` WHERE
+			orderId=#{orderId} AND delFlag=0
+			<if test="isKefu != null and isKefu != ''">
+				AND (userId=#{isKefu} or status &lt;&gt; 0)
+			</if>
+			<if test="isOperationDirector != null and isOperationDirector != ''">
+				AND `status` &lt;&gt; 0
+			</if> 
+			<if test="isYunzuo != null and isYunzuo != '' ">
+				AND userId= #{isYunzuo} 
+			</if>
+			order by createTime desc
+	</select>
+	
+	<resultMap type="pd" id="attach">
+		<id property="id" column="id"/>
+		<collection property="attachs" select="selectAttachs" column="id"></collection>
+	</resultMap>
+	
+	<select id="selectAttachs" parameterType="Integer" resultType="pd">
+		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=4 order by id desc
+	</select>
+	
+	
+	<select id="findPayment" parameterType="pd" resultMap="attach1">
+				SELECT
+				id,
+				orderId,
+				currentMoney,
+				IFNULL(date_format(currentTime, '%Y-%m-%d'),'') currentTime,
+				currentBalance,
+				IFNULL(date_format(planTime, '%Y-%m-%d'),'') planTime,
+				onceMoney,
+				IFNULL(remark, '') remark
+				FROM `paymentdetail_info` WHERE orderId
+				= #{orderId} AND delFlag = 0  order by currentTime desc
+	</select>
+	
+	<resultMap type="pd" id="attach1">
+		<id property="id" column="id"/>
+		<collection property="attachs" select="selectAttachs1" column="id"></collection>
+	</resultMap>
+	
+	<select id="selectAttachs1" parameterType="Integer" resultType="pd">
+		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=3 order by id desc
+	</select>
+	
+	
+	<select id="findProcessInfo" parameterType="pd" resultMap="attach2">
+			<!-- 案件报告 -->
+		SELECT a.id,a.orderId,a.link,IFNULL(a.remark,'') remark,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,a.gjStatus,xcgjTime,IFNULL(a.recordUrl,'') recordUrl FROM
+		`process_info` a WHERE
+		a.orderId=#{orderId}  and ((createTime is not null and calluuid is not null) or calluuid is null)
+		<if test="id !=null and id !=''">
+			and a.id=#{id} 
+		</if>
+		order by a.createTime desc
+	</select>
+	<resultMap type="pd" id="attach2">
+		<id property="id" column="id"/>
+		<collection property="attachs" select="selectAttachs2" column="id"></collection>
+	</resultMap>
+	
+	<select id="selectAttachs2" parameterType="Integer" resultType="pd">
+		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=10 order by id desc
+	</select>
+	
+	<update id="updateProcess" parameterType="pd">
+		update process_info set link=#{link},remark=#{remark},gjStatus=#{gjStatus},createTime=#{createTime},xcgjTime=#{xcgjTime} where 
+		<if test="id !=null and id!=''">
+			 id=#{id} 
+		</if>
+		<if test="callId !=null and callId !=''">
+			 callUuId=#{callId} 
+		</if>
+	</update>
+	
+	
+	<select id="finddebtor" parameterType="pd" resultType="pd">
+		SELECT id,orderId,warnType,IFNULL(remark,'') remark,IFNULL(date_format(createTime,'%Y-%m-%d %H:%i:%s'),'') createTime FROM
+		`debturgereport_info` WHERE
+		orderId=#{orderId} 
+		order by createTime desc
+	</select>
+	
+	
+	<select id="findHkjh" parameterType="pd" resultType="pd">
+			<!-- 案件报告 -->
+		SELECT a.id,a.orderId,a.onceMoney,IFNULL(a.remark,'') remark,a.type,a.periods,IFNULL(date_format(a.planTime,'%Y-%m-%d %H:%i:%s'),'') planTime,
+		 b.id subId,IFNULL(date_format(b.time,'%Y-%m-%d %H:%i:%s'),'') time,b.money,b.remark remark1,case when a.planTime is null or a.planTime='' then b.time else a.planTime end times
+		 FROM
+		`paymentplan_info` a 
+		left join 
+		paymentSub_info b
+		on a.id=b.paymentId
+		WHERE
+		a.orderId=#{orderId} 
+		order by times
+	</select>
+	
+	
+	<select id="findAjjj" parameterType="pd" resultMap="attach3">
+			<!-- 案件报告 -->
+		SELECT id,susongstatus,zongcstatus,remark,IFNULL(date_format(time,'%Y-%m-%d'),'') time FROM
+		`handover_info` WHERE
+		orderId=#{orderId} 
+		<if test="id !=null and id !=''">
+			and id=#{id} 
+		</if>
+		order by createTime desc
+	</select>
+	<resultMap type="pd" id="attach3">
+		<id property="id" column="id"/>
+		<collection property="attachs" select="selectAttachs3" column="id"></collection>
+	</resultMap>
+	
+	<select id="selectAttachs3" parameterType="Integer" resultType="pd">
+		select * from Attach_info where delFlag = 0 and relateId=#{id}  and type=8 order by id desc
+	</select>
+	
+	<insert id="saveLinkManInfo">
+		insert into linkman_info(relateId,name,type,postion,mobilePhone,landline) VALUES(#{debtorId},#{name},1,#{postion},#{mobilePhone},#{landline})
+	</insert>
+	
+	<delete id="deleteAttachs" parameterType="pd">
+		delete from attach_info where relateId=#{orderOrCustomerId} and type=#{type} 
+	</delete>
+	
+	<update id="updateGjStatus" parameterType="pd">
+		update order_info set gjStatus=#{gjStatus} where id=#{orderId} 
+	</update>
+	
+	<insert id="saveCallInfo" parameterType="pd">
+		insert into call_info(userId,orderId,time,remark,customerId,processId) values(#{userId},#{orderId},#{time},#{remark},#{customerId},#{processId})
+	</insert>
+	
+	<update id="updateCallInfo" parameterType="pd">
+		update call_info set flag=1 where id=#{id} 
+	</update>
+	
+	<update id="updateCallInfo1" parameterType="pd">
+		update call_info set time=#{time} where processId=#{id} 
+	</update>
+	
+	<select id="getMonthData" parameterType="pd" resultType="pd">
+		SELECT
+			IFNULL(date_format(a.currentTime,'%Y-%m-%d'),'') currentTime,
+			IFNULL(b.custoemrName,'') custoemrName,
+			IFNULL(b.debtorName,'') debtorName,
+			IFNULL(a.currentMoney,'') currentMoney,
+			CASE
+		WHEN c.id IS NULL THEN
+			'外'
+		ELSE
+			'内'
+		END jhnw,
+		  CASE when b.cType=0 then
+		(case WHEN b. STATUS = 0 THEN
+			a.currentMoney * b.commissionRate * b.discount / 10000
+		WHEN b. STATUS = 3
+		OR b. STATUS = 4 THEN
+			a.currentMoney * b.lawCommissionRate * b.susongdiscount / 10000
+		ELSE
+			a.currentMoney * (
+				CASE
+				WHEN b.lawCommissionRate IS NULL THEN
+					b.commissionRate * (
+						CASE
+						WHEN b.discount IS NULL
+						OR b.discount = '' THEN
+							'100'
+						ELSE
+							b.discount
+						END
+					)
+				WHEN b.lawCommissionRate = '' THEN
+					b.commissionRate * (
+						CASE
+						WHEN b.discount IS NULL
+						OR b.discount = '' THEN
+							'100'
+						ELSE
+							b.discount
+						END
+					)
+				ELSE
+					b.lawCommissionRate * (
+						CASE
+						WHEN b.susongdiscount IS NULL
+						OR b.susongdiscount = '' THEN
+							'100'
+						ELSE
+							b.susongdiscount
+						END
+					)
+				END
+			) / 10000 end) else b.fixedMoney 
+			END yjje
+		FROM
+			(
+				SELECT
+					currentMoney,
+					currentTime,
+					orderId
+				FROM
+					paymentdetail_info
+				WHERE
+					date_format(currentTime, '%Y-%m') = date_format(curdate(), '%Y-%m')
+			) a
+		INNER JOIN (
+			SELECT
+				a.id,
+				IFNULL(d. NAME, '') custoemrName,
+				IFNULL(e. NAME, '') debtorName,
+				a.commissionRate,
+				a.cType,
+				a. STATUS,
+				CASE
+			WHEN a.discount IS NULL
+			OR a.discount = '' THEN
+				'100'
+			ELSE
+				a.discount
+			END discount,
+			CASE
+		WHEN a.susongdiscount IS NULL
+		OR a.susongdiscount = '' THEN
+			'100'
+		ELSE
+			a.susongdiscount
+		END susongdiscount,
+		 a.fixedMoney,
+		 a.lawCommissionRate,
+		 a.debtAmount - h.totalMoney syMoney
+		FROM
+			order_info a
+		LEFT JOIN sys_user b ON a.saleId = b.USER_ID
+		LEFT JOIN sys_user c ON a.runnerId = c.USER_ID
+		LEFT JOIN customer_info d ON a.customerId = d.id
+		LEFT JOIN debtor_info e ON a.debtorId = e.id
+		LEFT JOIN report_info g ON a.id = g.orderId
+		AND g.type IN (1, 2)
+		LEFT JOIN report_info f ON a.id = f.orderId
+		AND f.type = 3
+		LEFT JOIN (
+			SELECT
+				sum(currentMoney) totalMoney,
+				orderId
+			FROM
+				paymentdetail_info
+			GROUP BY
+				orderId
+		) h ON a.id = h.orderId
+		WHERE
+			a.delFlag = 0
+		 	<if test="runnerId !=null and runnerId !=''">
+				and a.runnerId=#{runnerId}
+			</if>
+			<if test="isRunDirector != null and isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe')
+			</if>
+		) b ON a.orderId = b.id
+		LEFT JOIN (select * from proximopaymentplan_info GROUP BY date_format(planTime, '%Y-%m')) c ON a.orderId = c.orderId
+		AND date_format(c.planTime, '%Y-%m') = date_format(curdate(), '%Y-%m')
+		where 1=1  order by a.currentTime desc
+	</select>
+	
+	
+	<select id="getXyhklist"   parameterType="pd" resultType="pd">
+			select
+			IFNULL(d.name,'') custoemrName,
+			IFNULL(e.name,'') debtorName,	
+			f.money,
+			case when a.cType=0 then(
+			case when a.status=0 then f.money*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+			when a.status=3 or a.status=4 then f.money*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+			else f.money*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+					 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+						   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+			end) else a.fixedMoney end commissionaMount,
+			IFNULL(date_format(f.planTime,'%Y-%m-%d %H:%i:%s'),'') planTime 
+		from
+			order_info a 
+			<if test="issxy=='xy'">
+			inner join 
+			(select * from proximopaymentplan_info where date_format(planTime,'%Y-%m')=date_format(DATE_add(curdate(), INTERVAL 1 MONTH),'%Y-%m')) f
+			on a.id =f.orderId 
+			</if>
+			<if test="issxy=='sy'">
+			inner join 
+			(select * from proximopaymentplan_info where date_format(planTime,'%Y-%m')=date_format(DATE_SUB(curdate(), INTERVAL 1 MONTH),'%Y-%m')) f
+			on a.id =f.orderId 
+			</if>
+		left join 
+			sys_user b
+			on a.saleId=b.USER_ID
+		left join 	
+			sys_user c
+			on a.runnerId =c.USER_ID
+		left join 	
+			customer_info d
+			on a.customerId =d.id
+		left join
+			debtor_info e
+			on a.debtorId=e.id
+		where a.delflag=0 
+		<if test="runnerId !=null and runnerId !=''">
+			and a.runnerId=#{runnerId}
+		</if>
+		<if test="isRunDirector != null and isRunDirector != ''"><!-- 注册时间检索 -->
+			and a.runnerId in(select user_Id from sys_user where role_id='02178e62f17b4926bb7014f3ad5a1ebe')
+		</if>
+		order by f.planTime desc
+	</select>
+	
+	<insert id="saveorUpdateMonthData" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+			<choose>
+				<when test="id != null and id != '' and id > 0">
+					update monthReport_info set editTime = current_timestamp()
+					<if test="userId != null and userId != ''">
+						,userId = #{userId}
+					</if>
+					<if test="status != null and status != ''">
+						,`status` = #{status}
+					</if>
+					<if test="title != null and title != ''">
+						,title = #{title}
+					</if>
+					<if test="wtdd != null and wtdd != ''">
+						,wtdd = #{wtdd}
+					</if>
+					<if test="xydd != null and xydd != ''">
+						,xydd = #{xydd}
+					</if>
+					<if test="zje != null and zje != ''">
+						,zje = #{zje}
+					</if>
+					<if test="byja != null and byja != ''">
+						,byja = #{byja}
+					</if>
+					<if test="bygb != null and bygb != ''">
+						,`bygb` = #{bygb}
+					</if>
+					<if test="wtje != null and wtje != ''">
+						,wtje = #{wtje}
+					</if>
+					<if test="sjwc != null and sjwc != ''">
+						,sjwc = #{sjwc}
+					</if>
+					<if test="jdjdmb != null and jdjdmb != ''">
+						,jdjdmb = #{jdjdmb}
+					</if>
+					<if test="jhrate != null and jhrate != ''">
+						,jhrate = #{jhrate}
+					</if>
+					<if test="sjrate != null and sjrate != ''">
+						,sjrate = #{sjrate}
+					</if>
+					<if test="zd != null and zd != ''">
+						,zd = #{zd}
+					</if>
+					<if test="rq != null and rq != ''">
+						,`rq` = #{rq}
+					</if>
+					<if test="zqr != null and zqr != ''">
+						,zqr = #{zqr}
+					</if>
+					<if test="zwr != null and zwr != ''">
+						,zwr = #{zwr}
+					</if>
+					<if test="hkje != null and hkje != ''">
+						,hkje = #{hkje}
+					</if>
+					<if test="yjsr != null and yjsr != ''">
+						,yjsr = #{yjsr}
+					</if>
+					<if test="jhnwzd != null and jhnwzd != ''">
+						,jhnwzd = #{jhnwzd}
+					</if>
+					<if test="zdms != null and zdms != ''">
+						,zdms = #{zdms}
+					</if>
+					<if test="yjwwcfx != null and yjwwcfx != ''">
+						,yjwwcfx = #{yjwwcfx}
+					</if>
+					<if test="zwpj != null and zwpj != ''">
+						,zwpj = #{zwpj}
+					</if>
+					<if test="gzyq != null and gzyq != ''">
+						,gzyq = #{gzyq}
+					</if>
+					<if test="zdsjyxsj != null and zdsjyxsj != ''">
+						,zdsjyxsj = #{zdsjyxsj}
+					</if>
+					<if test="yjrq != null and yjrq != ''">
+						,yjrq = #{yjrq}
+					</if>
+					<if test="yjzqr != null and yjzqr != ''">
+						,yjzqr = #{yjzqr}
+					</if>
+					<if test="yjzwr != null and yjzwr != ''">
+						,yjzwr = #{yjzwr}
+					</if>
+					<if test="yjhkje != null and yjhkje != ''">
+						,yjhkje = #{yjhkje}
+					</if>
+					<if test="yjyjsr != null and yjyjsr != ''">
+						,yjyjsr = #{yjyjsr}
+					</if>
+					<if test="yjzwr != null and yjzwr != ''">
+						,yjzwr = #{yjzwr}
+					</if>
+					<if test="yjndfx != null and yjndfx != ''">
+						,yjndfx = #{yjndfx}
+					</if>
+					<if test="yjja != null and yjja != ''">
+						,yjja = #{yjja}
+					</if>
+					<if test="gbs != null and gbs != ''">
+						,gbs = #{gbs}
+					</if>
+					where id = #{id}
+				</when>
+				<otherwise>
+					insert into monthReport_info (userId,`status`,title,wtdd,xydd,zje,byja,bygb,wtje,jdjdmb,sjwc,jhrate,sjrate,zd,rq,zqr,zwr,hkje,yjsr,jhnwzd,zdms,yjwwcfx,zwpj,gzyq,zdsjyxsj,yjrq,yjzqr,yjzwr,yjhkje,yjyjsr,yjndfx,yjja,gbs) 
+					values (#{userId},#{status},#{title},#{wtdd},#{xydd},#{zje},#{byja},#{bygb},#{wtje},#{jdjdmb},#{sjwc},#{jhrate},#{sjrate},#{zd},#{rq},#{zqr},#{zwr},#{hkje},#{yjsr},#{jhnwzd},#{zdms},#{yjwwcfx},#{zwpj},#{gzyq},#{zdsjyxsj},#{yjrq},#{yjzqr},#{yjzwr},#{yjhkje},#{yjyjsr},#{yjndfx},#{yjja},#{gbs})
+				</otherwise>
+			</choose>
+		</insert>
+		
+		<select id="listMonthReportlistPage" parameterType="page" resultType="pd">
+			select
+				a.id,
+				a.userId,
+				b.name userName,
+				a.status,
+				a.title,
+				a.wtdd,
+				a.xydd,
+				a.zje,
+				a.byja,
+				a.bygb,
+				a.wtje,
+				a.jdjdmb,
+				a.sjwc,
+				a.jhrate,
+				a.sjrate,
+				a.zd,
+				a.rq,
+				a.zqr,
+				a.zwr,
+				a.hkje,
+				a.yjsr,
+				a.jhnwzd,
+				a.zdms,
+				a.yjwwcfx,
+				a.zwpj,
+				a.gzyq,
+				a.zdsjyxsj,
+				a.yjrq,
+				a.yjzqr,
+				a.yjzwr,
+				a.yjhkje,
+				a.yjyjsr,
+				a.yjndfx,
+				a.yjja,
+				a.gbs,
+				IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			from monthReport_info a
+				inner join 
+				sys_user b
+				on a.userId=b.user_Id 
+				where a.delflag=0 
+			<choose>
+				<when test="pd.userId !=null and pd.userId !=''">
+					and a.userId=#{pd.userId}
+				</when>
+				<otherwise>
+					and a.status in(1,2)  
+				</otherwise>
+			</choose>
+			<if test="pd.runnerId !=null and pd.runnerId !=''">
+					and a.userId=#{pd.runnerId}
+			</if>
+			<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+				and
+				(
+				a.title LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				)
+			</if>
+			<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+				and date_format(a.createTime,'%Y-%m') = #{pd.createTimeStart}
+			</if>
+			order by a.createTime desc
+		</select>
+		
+		<select id="findMonthDataById" parameterType="pd" resultType="pd">
+			select
+				a.userId,
+				b.name userName,
+				a.status,
+				a.title,
+				a.wtdd,
+				a.xydd,
+				a.zje,
+				a.byja,
+				a.bygb,
+				a.wtje,
+				a.jdjdmb,
+				a.sjwc,
+				a.jhrate,
+				a.sjrate,
+				a.zd,
+				a.rq,
+				a.zqr,
+				a.zwr,
+				a.hkje,
+				a.yjsr,
+				a.jhnwzd,
+				a.zdms,
+				a.yjwwcfx,
+				a.zwpj,
+				a.gzyq,
+				a.zdsjyxsj,
+				a.yjrq,
+				a.yjzqr,
+				a.yjzwr,
+				a.yjhkje,
+				a.yjyjsr,
+				a.yjndfx,
+				a.yjja,
+				a.gbs,
+				IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+				IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+			from monthReport_info a
+				inner join 
+				sys_user b
+				on a.userId=b.user_Id 
+				where 1=1 
+				<if test="id !=null and id !=''">
+					and id=#{id}
+				</if>
+				<if test="time!=null and time !=''">
+					and date_format(a.createTime,'%Y-%m')= #{time} and a.userId=#{userId}
+				</if>
+		</select>
+		
+		<select id="findNoticInfo" parameterType="pd" resultType="pd">
+			select a.id,a.type,a.flag,a.relateId,a.content,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime from notic_info a where 1=1
+			<if test="type==1">
+				and flag=0
+			</if>
+			<if test="id !=null and id!=''">
+				and id=#{id}
+			</if>
+			<if test="userId !=null and userId!=''">
+				and userId=#{userId} and type not in(5,6,7,10)
+			</if>
+			<if test="roleId !=null and roleId !=''">
+				union all 
+				select a.id,a.type,a.flag,a.relateId,a.content,IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime from notic_info a where 1=1
+				<if test="type==1">
+					and flag=0
+				</if>
+				<if test="id !=null and id!=''">
+					and id=#{id}
+				</if>
+				 and a.type in(5,6,7,10)
+				</if>
+			order by id desc
+		</select>
+		
+		<update id="updateNoticInfo" parameterType="pd">
+			update notic_info set flag=1 
+			<if test="id!=null and id !=''">
+				where id=#{id} 
+			</if>
+		</update>
+</mapper>

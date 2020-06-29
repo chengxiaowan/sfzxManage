@@ -1,0 +1,1094 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="YjMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		YJ_INFO
+	</sql>
+
+	<!-- 保存 -->
+	<insert id="addYjzb" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+				insert into
+				<include refid="tableName"></include>
+				(
+					type,
+					year
+				) values (
+					#{type},
+					#{year} 
+				)
+	</insert>
+
+	<delete id="deleteYjzb" parameterType="pd">
+		delete from yj_info where id =#{parentId} or parentId =#{parentId} 
+	</delete>
+	
+	<select id="findIsExsits" parameterType="pd" resultType="pd">
+		select id from yj_info where type=#{type} and year=#{year} 
+	</select>
+	
+	
+	<select id="findwxDkje" parameterType="pd" resultType="pd">
+			select
+				sum(
+				case when a.cType=0 then (
+					case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+					 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+					 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+						 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+							   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+					 end) else a.fixedMoney end) hkMoney
+			from
+				order_info a 
+				inner join 
+				paymentdetail_info f
+			on a.id =f.orderId 
+			where  a.delflag=0
+			<if test="startTime !=null and startTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d ') &gt;= #{startTime}
+			</if>	
+			<if test="endTime !=null and endTime !=''">
+				and date_format(f.currentTime,'%Y-%m-%d ') &lt;= #{endTime}
+			</if>	
+			and a.contractId in (select id from contract_info where swwxId=#{userId})
+	</select>
+	
+	
+	<select id="showSwgw" parameterType="pd" resultType="pd">
+		SELECT
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			a.user_id userId
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+			on a.role_id =b.role_id	
+		 	where b.parent_Id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c') and a.isQuit=0
+	</select>
+	
+	<select id="showYjzbDetail" parameterType="pd"  resultType="pd">
+		<!-- 类型(0:电销电话量,1:电销意向客户数,2:商务顾问到款任务，3:商务顾问合同数量，4商务顾问订单金额 5商务顾问拜访量 -->
+		<if test="type==0 or type==1">
+			SELECT
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			a.user_id userId,
+			c.monthOrjd,
+			c.targetDetail
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+			on a.role_id =b.role_id	
+			left join
+			yj_info c
+			on a.user_Id=c.userId
+		 and c.parentId=#{parentId} 
+		 	where b.parent_Id='a5207f2a9a2b46f49ff52ff5c9669341' and a.isQuit=0
+		</if>
+		<if test="type==2 or type==3 or type==4 or type==5">
+			SELECT
+				b.ROLE_NAME roleName,
+				b.role_id roleId,
+				c.monthOrjd,
+				c.roleId,
+				c.targetDetail
+			FROM
+				sys_role b
+			 left join
+				yj_info c
+			on b.role_id=c.roleId
+		 	 and c.parentId=#{parentId} and c.userId=#{userId} 
+		 	where b.parent_Id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c')
+			order by b.NUMSORT,c.id 
+		</if>
+		<if test="type==6">
+			SELECT
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			a.user_id userId,
+			c.monthOrjd,
+			c.targetDetail
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+			on a.role_id =b.role_id	
+			left join
+			yj_info c
+			on a.user_Id=c.userId
+		 and c.parentId=#{parentId} 
+		 	where b.parent_Id='c068a63a15f741d883ae13463be57954' and a.isQuit=0
+		</if>
+		<if test="type==7">
+			SELECT
+				zbA,
+				zbB,
+				bfzb,
+				type,
+				id
+			FROM yj_info 
+		    where  parentId=#{parentId} 
+		</if>
+		<if test="type==8 or type==9 or type==10  ">
+			SELECT
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			a.user_id userId,
+			c.monthOrjd,
+			c.targetDetail
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+			on a.role_id =b.role_id	
+			left join
+			yj_info c
+			on a.user_Id=c.userId
+		 and c.parentId=#{parentId} 
+		 	where b.role_id='90564dd8b75a4f6d815ce418462d401c' and a.isQuit=0
+		</if>
+		<if test="type==11 or type==12 ">
+			SELECT
+			a. NAME name,
+			c.conditions,
+			b.ROLE_NAME roleName,
+			a.user_id userId,
+			c.monthOrjd,
+			c.targetDetail
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+			on a.role_id =b.role_id	
+			left join
+			yj_info c
+			on a.user_Id=c.userId
+		 and c.parentId=#{parentId} 
+		 	where b.parent_Id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c') and a.isQuit=0
+		</if>
+	</select>
+	
+	
+	<select id="showYjzbList"  parameterType="pd" resultType="pd">
+		<if test="flag==0">
+			SELECT
+				id,
+				year,
+				type
+			FROM
+				yj_info 
+				where parentId=0 and type &lt;=10
+				<if test="year !=null and year !=''">
+					and year = #{year}
+				</if>
+				<if test="type !=null and type !=''">
+					and type = #{type}
+				</if>
+		</if>
+		<if test="flag==1">
+			SELECT
+				id,
+				year,
+				type
+			FROM
+				yj_info 
+				where parentId=0 and type &gt;10
+				<if test="year !=null and year !=''">
+					and year = #{year}
+				</if>
+				<if test="type !=null and type !=''">
+					and type = #{type}
+				</if>
+		</if>
+	</select>
+	
+	
+	<delete id="deleteYjzb1" parameterType="pd">
+		delete from yj_info where parentId =#{parentId} 
+	</delete>
+	
+	
+	<insert id="insertBatch" parameterType="java.util.List">
+		insert into
+			YJ_INFO
+			(
+			parentId,
+			type,
+			monthOrjd,
+			targetDetail,
+			conditions,
+			roleId,
+			userId
+			)values
+	 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+             (
+             #{reddemCode.parentId},
+             #{reddemCode.type},
+             #{reddemCode.monthOrjd},
+             #{reddemCode.targetDetail},
+             #{reddemCode.conditions},
+             #{reddemCode.roleId},
+          	 #{reddemCode.userId}
+             )
+       </foreach>
+	</insert>
+	
+	
+	<insert id="addJxxz" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+				insert into
+					yjxz_info
+				(
+					name,
+					type 
+				) values (
+					#{name},
+					#{type}
+				)
+	</insert>
+	
+	<select id="showYjtcList"  resultType="pd">
+			SELECT
+				id,
+				name,
+				type
+			FROM
+				yjxz_info where flag=0 and parentId=0
+	</select>
+	
+	<delete id="deleteYjxz" parameterType="pd">
+		delete from yjxz_info where id =#{parentId} or parentId =#{parentId} 
+	</delete>
+	
+	<select id="showYjxzDetail" parameterType="pd"  resultType="pd">
+			SELECT
+			c.id,
+			b.ROLE_NAME name,
+			c.targetDetail
+			FROM
+				sys_role b
+			inner join
+				yjxz_info c
+			on b.role_Id=c.userId
+			and c.parentId=#{parentId} 
+			and c.flag=0
+	</select>
+	
+	<select id="findIsExsits1" parameterType="pd" resultType="pd">
+		select id from yjxz_info where type=#{type} and flag=0 and parentId=0
+	</select>
+	
+	
+	<delete id="deleteDx" parameterType="pd">
+		delete from yjxz_info where flag=#{flag}
+	</delete>
+	
+	
+	<select id="showYDxzDetail" parameterType="pd"  resultType="pd">
+			SELECT
+			c.id,
+			a.user_id userId,
+			a. NAME name,
+			b.ROLE_NAME roleName,
+			c.targetDetail
+			FROM
+				sys_user a
+			 inner join 
+				sys_role b
+				on a.role_id =b.role_id	 and a.isQuit=0
+			inner join
+				yjxz_info c
+			on a.user_Id=c.userId and c.flag=1
+			 <if test="userId!=null and userId !=''">
+			 	and c.userId=#{userId}
+			 </if>
+		 <!-- 	where b.role_id='7d2f882f13ea48e0a4c8acaeea53b3a5' or b.role_id='30b1487221464d369ca4c2462ccca920' -->
+	</select>
+	
+	
+	
+	<insert id="insertBatchDx" parameterType="java.util.List">
+		insert into
+			yjxz_info
+			(
+				flag,
+				targetDetail,
+				userId
+			)values
+	 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+             (
+	             #{reddemCode.flag},
+	             #{reddemCode.targetDetail},
+	          	 #{reddemCode.userId}
+             )
+       </foreach>
+	</insert>
+	
+	
+	<select id="showTsyg" parameterType="pd"  resultType="pd">
+			SELECT
+				c.id,
+				a.user_id userId,
+				a. name,
+				b.ROLE_NAME roleName,
+				c.targetDetail
+				FROM
+					sys_user a
+				 inner join 
+					sys_role b
+					on a.role_id =b.role_id	and a.isQuit=0
+				inner join
+					yjxz_info c
+				on a.user_Id=c.userId
+				and c.flag=2
+			 where b.role_id in ('fbe6f2f9535c4fce9f024f6cb999b2bd') 
+			 <if test="userId!=null and userId !=''">
+			 	and c.userId=#{userId}
+			 </if>
+	</select>
+	
+	<select id="findIsExsits2" parameterType="pd" resultType="pd">
+		select id from 	yjxz_info where flag=#{flag} and userId=#{userId} 
+		<if test="type !=null and type !='' and flag==0">
+			 and type= #{type} 
+		</if>
+	</select>
+	
+	
+	<insert id="addDxOrTs" parameterType="pd">
+		insert into
+			yjxz_info
+			(
+				flag,
+				type,
+				targetDetail,
+				parentId,
+				userId
+			)values
+             (
+	             #{flag},
+	             #{type},
+	             #{targetDetail},
+	             #{parentId},
+	          	 #{userId}
+             )
+	</insert>
+	
+	<select id="showRoleList" parameterType="pd" resultType="pd">
+			select role_id roleId,role_name name from sys_role where 1=1
+			<if test="type==0">
+					and parent_id='a5207f2a9a2b46f49ff52ff5c9669341'
+			</if>
+			<if test="type==1">
+					and role_id='01dc6d29f1704efeab0376d327f47d98'
+			</if>
+			<if test="type==2">
+					and parent_id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd')
+			</if>
+	</select>
+	
+	<update id="updateById" parameterType="pd">
+		update yjxz_info set 
+		<if test="targetDetail!=null and targetDetail!=''">
+			targetDetail=#{targetDetail}
+		</if>
+		<if test="name !=null and name !=''">
+			name=#{name}
+		</if>
+		 where id=#{id}
+	</update>
+	
+	<delete id="deleteById"  parameterType="pd">
+		delete from yjxz_info where id=#{id} 
+	</delete>
+	
+	<select id="showTcgzList" resultType="pd">
+			SELECT
+				a.id,
+				a.name,
+				a.tcStandard,
+				b.role_name roleName,
+				a.fdStandard,
+				a.yjStandard
+			FROM
+				yjtc_info a,
+				sys_role b
+			WHERE
+				a.roleId = b.role_id
+				and a.fdStandard between 0 and 4
+	</select>
+	
+	<select id="showTcgzList1" parameterType="pd"  resultType="pd">
+		<if test="flag==1">
+			SELECT
+				a.id,
+				b.name userName,
+				c.role_name roleName,
+				a.fdStandard
+				FROM
+					yjtc_info a
+				inner join
+					sys_user b
+					on a.roleId = b.user_id and b.isQuit=0
+				inner join
+					sys_role c
+				 	on b.role_Id=c.role_id
+			WHERE
+					1=1
+				<if test="roleId!=null and roleId!=''">
+					and a.roleId in (select user_Id from sys_user where role_id in (#{roleId}))
+				</if>
+				<if test="userId!=null and userId!=''">
+					and a.roleId =#{userId}
+				</if>
+				and a.fdStandard between 5 and 6
+			</if>
+			<if test="flag==2">
+			SELECT
+				a.id,
+				a.name,
+				a.tcStandard,
+				b.role_name roleName,
+				a.fdStandard,
+				a.yjStandard
+			FROM
+				yjtc_info a,
+				sys_role b
+			WHERE
+				a.roleId = b.role_id
+				and a.fdStandard between 7 and 9
+			</if>
+	</select>
+	
+	
+	
+	<select id="showRoleListByFdzb" parameterType="pd" resultType="pd">
+		<choose>
+			<when test="fdStandard !=5 and  fdStandard !=6">
+			select role_id roleId,role_name name from sys_role where 1=1
+				<if test="fdStandard==0 or fdStandard==1">
+						and parent_id='a5207f2a9a2b46f49ff52ff5c9669341'
+				</if>
+				<if test="fdStandard==2">
+						and role_id='01dc6d29f1704efeab0376d327f47d98'
+				</if>
+				<if test="fdStandard==3 or fdStandard==4 or fdStandard==5">
+						and role_id='a8f76756b4dd4fbb8ca063bd76cb3fb5' 
+				</if>
+			</when>
+			<otherwise>
+				SELECT
+				a.user_id userId,
+				a. name,
+				b.ROLE_NAME roleName
+				FROM
+					sys_user a
+				 inner join 
+					sys_role b
+					on a.role_id =b.role_id	and a.isQuit=0
+			 	where 1=1 
+			 	<if test="fdStandard==5">
+			 	and b.parent_id='a8f76756b4dd4fbb8ca063bd76cb3fb5' and b.role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd','90564dd8b75a4f6d815ce418462d401c');
+			 	</if>
+				<if test="fdStandard==6">
+				and b.parent_id='c068a63a15f741d883ae13463be57954' 
+				</if>
+			</otherwise>
+		</choose>
+	</select>
+	
+	
+	<select id="findIsExsits3" parameterType="pd" resultType="pd">
+		select id from 	yjtc_info where fdStandard=#{fdStandard} and roleId=#{roleId}
+		<if test="id !=null and id !=''">
+			and id &lt;&gt; #{id}
+		</if>
+	</select>
+	
+	
+	<insert id="saveTcgz" parameterType="pd" useGeneratedKeys="true" keyProperty="id">
+		insert into yjtc_info(name,tcStandard,fdStandard,yjStandard,roleId) values(#{name},#{tcStandard},#{fdStandard},#{yjStandard},#{roleId})
+	</insert>
+	
+	
+	<insert id="insertBatchTc" parameterType="java.util.List">
+		insert into
+			yjtc_relate_info
+			(
+				yjtcId,
+				fdzb,
+				tc
+			)values
+	 <foreach collection ="list" item="reddemCode" index="index" separator =",">
+             (
+	             #{reddemCode.yjtcId},
+	             #{reddemCode.fdzb},
+	          	 #{reddemCode.tc}
+             )
+       </foreach>
+	</insert>
+	
+	
+	<update id="updateTcgz" parameterType="pd">
+		update yjtc_info set name=#{name},tcStandard=#{tcStandard},fdStandard=#{fdStandard},yjStandard=#{yjStandard},roleId=#{roleId}
+		where id=#{yjtcId}
+	</update>
+
+	<delete id="deleteAbout"  parameterType="pd">
+		delete from yjtc_relate_info where yjtcId=#{yjtcId}
+	</delete>
+	
+	<select id="findById" parameterType="pd" resultMap="yjtc">
+		<if test="flag==0">
+			SELECT
+					a.id,
+					a.name,
+					a.tcStandard,
+					b.role_id roleId,
+					b.role_name roleName,
+					a.fdStandard,
+					a.yjStandard
+				FROM
+					yjtc_info a,
+					sys_role b
+				WHERE
+					a.roleId = b.role_id and a.id=#{id}
+		</if>
+		<if test="flag==1">
+			SELECT
+					a.id,
+					a.name,
+					a.tcStandard,
+					b.user_id userId,
+					b.name userName,
+					a.fdStandard,
+					a.yjStandard
+				FROM
+					yjtc_info a,
+					sys_user b
+				WHERE 
+					a.roleId = b.user_id and a.id=#{id}
+		</if>
+		
+	</select>
+	
+	
+	<resultMap type="pd" id="yjtc">
+		<collection property="yjtcList" column="id" select="findByYjtcId"></collection>	
+	</resultMap>
+	
+	<select id="findByYjtcId" parameterType="java.lang.Integer" resultType="pd">
+		select fdzb,tc from yjtc_relate_info where yjtcId=#{id}
+	</select>
+	
+	<delete id="deleteTcgzById" parameterType="pd">
+		delete from yjtc_info where id=#{id} 
+	</delete>
+	
+	<select id="getMoneyByUserId" parameterType="pd" resultType="pd">
+	SELECT
+		sum(targetDetail) targetDetail
+		FROM
+			yj_info
+		WHERE
+			parentId IN (
+				SELECT
+					id
+				FROM
+					yj_info
+				WHERE
+					`year` = #{date} 
+					<if test="flag==2">
+						and type=2
+					</if>
+					<if test="flag==3">
+						and type=6
+					</if>
+					)
+		 and userId=#{userId}					
+	</select>
+	
+	<update id="updateYgxz" parameterType="pd">
+		update ygxz_info set je4=#{je4} where flag=0 and userId=#{userId} 
+	</update>
+	
+	
+	<select id="showYgxzOrTc" parameterType="pd" resultType="pd">
+		<if test="flag==0">
+			SELECT
+				a.id,a.je1,a.je2,a.je3,a.je4,tcbl,ifnull(a.je1,0)+ifnull(a.je2,0)+ifnull(a.je3,0)+ifnull(a.je4,0) zje,
+				b.name userName,
+				a.userId,
+				c.role_name roleName
+			FROM
+				ygxz_info a,
+				sys_user b,
+				sys_role c
+			WHERE
+				a.userId = b.user_id and b.role_id=c.role_id and a.flag=0
+				<if test="roleId !=null and roleId !=''">
+					and b.role_Id=#{roleId}
+				</if>
+				<if test="time !=null and time!=''">
+			and a.createTime = #{time}
+		</if>
+		<if test="userId !=null and userId!=''">
+			and b.user_id = #{userId}
+		</if>
+		
+		</if>
+		<if test="flag==1">
+			SELECT
+				a.id,a.je1,a.je2,a.je3,a.je4,tcbl,ifnull(a.je1,0)+ifnull(a.je2,0)+ifnull(a.je3,0)+ifnull(a.je4,0) zje,
+				b.name userName,
+				c.role_name roleName
+			FROM
+				ygxz_info a,
+				sys_user b,
+				sys_role c
+			WHERE
+				a.userId = b.user_id and b.role_id=c.role_id and a.flag=1
+				<if test="time !=null and time!=''">
+			and a.createTime = #{time}
+		</if>
+		<if test="userId !=null and userId!=''">
+			and b.user_id = #{userId}
+		</if>
+		
+		</if>
+		<if test="flag==2">
+			SELECT
+				a.id,a.je1,a.tcbl,a.je1*a.tcbl/100 zje,
+				b.name userName,
+				c.role_name roleName
+			FROM
+				ygxz_info a,
+				sys_user b,
+				sys_role c
+			WHERE
+				a.userId = b.user_id and b.role_id=c.role_id and a.flag=2
+				<if test="time !=null and time!=''">
+			and a.createTime = #{time}
+		</if>
+		<if test="userId !=null and userId!=''">
+			and b.user_id = #{userId}
+		</if>
+		
+		</if>
+		<if test="flag==3">
+		SELECT
+				a.id,a.je1,a.je2,a.je3,a.je4,tcbl,ifnull(a.je1,0)+ifnull(a.je2,0)+ifnull(a.je3,0)+ifnull(a.je4,0) zje,
+				b.name userName,
+				c.role_name roleName
+			FROM
+				ygxz_info a,
+				sys_user b,
+				sys_role c
+			WHERE
+				a.userId = b.user_id and b.role_id=c.role_id and a.flag=3
+				<if test="time !=null and time!=''">
+			and a.createTime = #{time}
+		</if>
+		<if test="userId !=null and userId!=''">
+			and b.user_id = #{userId}
+		</if>
+		
+		</if>
+		
+		<if test="flag==5">
+			SELECT
+				a.id,a.je1,a.je2,a.je3,a.je4,ifnull(a.je1,0)+ifnull(a.je2,0)+ifnull(a.je3,0)+ifnull(a.je4,0) zje,
+				b.name userName,
+				c.role_name roleName
+			FROM
+				ygxz_info a,
+				sys_user b,
+				sys_role c
+			WHERE
+				a.userId = b.user_id and b.role_id=c.role_id and a.flag=5
+				
+				<if test="time !=null and time!=''">
+			and a.createTime = #{time}
+		</if>
+		<if test="userId !=null and userId!=''">
+			and b.user_id = #{userId}
+		</if>
+		
+		</if>
+		
+		<if test="flag==4">
+		
+		select a.hkMoney je2,a.user_id userId,a.role_id,a.name userName,b.role_name roleName from(
+			SELECT
+				ROUND(sum(
+				case when a.cType=0 then (
+								case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+								 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+								 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+									 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+										   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+								 end) else a.fixedMoney end),2) hkMoney,
+				c.USER_ID,
+				c.Role_Id,
+				c. NAME
+			FROM
+				order_info a
+			INNER JOIN paymentdetail_info f ON a.id = f.orderId
+			INNER JOIN sys_user c ON a.saleId = c.user_id
+			AND c.ROLE_ID IN (
+				SELECT
+					role_id
+				FROM
+					sys_role
+				WHERE
+					parent_id = 'a8f76756b4dd4fbb8ca063bd76cb3fb5'
+			)
+			WHERE
+				a.delflag = 0
+			AND c.isQuit = 0
+			<if test="timeStart !=null and timeStart!=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &gt;= #{timeStart}
+			</if>
+			<if test="timeEnd !=null and timeEnd!=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &lt;= #{timeEnd}
+			</if>
+			<if test="userId !=null and userId!=''">
+				and c.user_id = #{userId}
+			</if>
+			GROUP BY
+				c.USER_ID
+		UNION ALL
+			SELECT
+				sum(
+				case when a.cType=0 then (
+								case when a.status=0 then f.currentMoney*a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)/10000
+								 when a.status=3 or a.status=4 then f.currentMoney*a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end)/10000  
+								 else f.currentMoney*(case when a.lawCommissionRate is null then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+									 	   				when a.lawCommissionRate = '' then a.commissionRate*(case when a.discount is null or a.discount ='' then '100' else a.discount end)
+										   				else a.lawCommissionRate*(case when a.susongdiscount is null or a.susongdiscount ='' then '100' else a.susongdiscount end) end)/10000
+								 end) else a.fixedMoney end) hkMoney,
+				c.USER_ID,
+				c.Role_Id,
+				c. NAME
+			FROM
+				order_info a
+			INNER JOIN paymentdetail_info f ON a.id = f.orderId
+			INNER JOIN sys_user c ON a.runnerId = c.user_id
+			AND c.ROLE_ID IN (
+				SELECT
+					role_id
+				FROM
+					sys_role
+				WHERE
+					parent_id = 'c068a63a15f741d883ae13463be57954'
+			)
+			WHERE
+				a.delflag = 0
+			AND c.isQuit = 0
+			<!-- <if test="createTime !=null and createTime!=''">
+				and date_format(f.currentTime,'%Y-%m') &gt;= #{createTime}
+			</if>
+			<if test="endTime !=null and endTime!=''">
+				and date_format(f.currentTime,'%Y-%m') &lt;= #{endTime}
+			</if> -->
+			<if test="timeStart !=null and timeStart!=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &gt;= #{timeStart}
+			</if>
+			<if test="timeEnd !=null and timeEnd!=''">
+				and date_format(f.currentTime,'%Y-%m-%d') &lt;= #{timeEnd}
+			</if>
+			<if test="userId !=null and userId!=''">
+				and c.user_id = #{userId}
+			</if>
+			GROUP BY
+				c.USER_ID) a
+				left join sys_role b
+				on a.role_id =b.role_id
+		</if>
+		
+	</select>
+	
+	
+	<select id="findUserByGroup" parameterType="pd" resultType="pd">
+			select a.user_id userId,a.role_id roleId,a.name,b.role_name roleName from sys_user a,sys_role b where a.role_id in(select role_id from sys_role where PARENT_ID=#{roleGroup}) and isQuit=0
+			and a.role_id=b.role_id
+			<if test="userId !=null and userId !=''">
+				and a.user_id=#{userId} 
+			</if>
+	</select>
+	
+	<select id="findUserByGroup1" parameterType="pd" resultType="pd">
+			select a.user_id userId,a.name,a.role_id roleId,b.role_name roleName from sys_user a,sys_role b where a.role_id in(select role_id from sys_role where PARENT_ID not in('a5207f2a9a2b46f49ff52ff5c9669341','a8f76756b4dd4fbb8ca063bd76cb3fb5','c068a63a15f741d883ae13463be57954')) and isQuit=0
+			and a.role_id=b.role_id
+			<if test="userId !=null and userId !=''">
+				and a.user_id=#{userId} 
+			</if>
+	</select>
+	
+	<select id="findDxByUserId"  parameterType="pd" resultType="pd">
+			select targetDetail je1 from yjxz_info where flag=#{flag} 
+			<if test="type !=null and type!='' and flag==0">
+				and type=#{type} and userId in (select role_Id from sys_user where user_Id=#{userId})
+			</if>
+			<if test="flag==1">
+				and userId=#{userId} 
+			</if>
+	</select>
+	
+	<select id="findDhlByUserId" parameterType="pd" resultType="pd">
+			select 	case when targetDetail is null or targetDetail='' then 0
+					else targetDetail end targetDetail  from yj_info where  userId=#{userId} and monthOrjd=#{monthOrjd} and parentId in (select id from yj_info where type=#{type} and year=#{year})
+	</select>
+	
+	<select id="findJe2" parameterType="pd" resultType="pd">
+			select b.tc from yjtc_info a,yjtc_relate_info b where a.fdStandard=#{fdStandard} and a.id=b.yjtcId and b.fdzb=#{fdzb} and a.roleId in (select role_Id from sys_user where user_Id=#{userId})
+	</select>
+	
+	<select id="findJe3" parameterType="pd" resultType="pd">
+		select b.fdzb,b.tc from yjtc_info a,yjtc_relate_info b where a.fdStandard=#{fdStandard} and a.id=b.yjtcId  
+		<if test="fdStandard !=5 and fdStandard !=6">
+			and a.roleId in (select b.role_id from sys_user a,sys_role b   where a.role_Id=b.role_id and a.user_Id=#{userId})
+		</if>
+		<if test="fdStandard ==5 or fdStandard ==6">
+			and a.roleId =#{userId}
+		</if>
+	</select>
+	
+	<insert id="insertYgxzInfo" parameterType="pd">
+		insert into ygxz_info(userId,je1,je2,je3,je4,tcbl,flag,createTime) values(#{userId},#{je1},#{je2},#{je3},#{je4},#{tcbl},#{flag},#{createTime})
+	</insert>
+	
+	<select id="getDktcGw" parameterType="pd" resultType="pd">
+		<if test="flag==0">
+			select role_id roleId,role_name roleName from sys_role where parent_id=#{parentId} and role_id not in('fbe6f2f9535c4fce9f024f6cb999b2bd') or parent_id ='c068a63a15f741d883ae13463be57954'
+		</if>
+		<if test="flag==1">
+			select name,user_id userId from sys_user 
+			where 1=1 and isQuit=0 
+			<if test="roleId !=null and roleId !=''">
+			 and role_id=#{roleId}
+			</if>
+		</if>
+	</select>
+	
+	<select id="findLastReportInfo" parameterType="pd" resultType="pd">
+		select flag,tips,isSure from userReport_info where userId=#{dfSaleId} and time =#{time} and type=0
+	</select>
+	
+	
+	<select id="findLastReportInfo1" parameterType="pd" resultType="pd">
+		select flag,tips from userReport_info where userId=#{dfSaleId} and date_format(time,'%Y-%m')=#{time} and type=1 order by time desc limit 1
+	</select>
+	
+	<select id="findLastReportInfo3" parameterType="pd" resultType="pd">
+		select flag,tips,qkje,flag1 from userReport_info where userId=#{saleId} and date_format(time,'%Y-%m-%d')=#{time} and type=2 
+	</select>
+	
+	<insert id="insertUserReportInfo" parameterType="pd" keyProperty="id" useGeneratedKeys="true" >
+		insert into userReport_info(
+				userId,
+				orgRoleId,
+				targetRoleId,
+				bz1,
+				bz2,
+				bz3,
+				bz4,
+				tips,
+				flag,
+				flag1,
+				qkje,
+				time,
+				type,
+				isSure
+		)values(
+				#{userId},
+				#{orgRoleId},
+				#{targetRoleId},
+				#{bz1},
+				#{bz2},
+				#{bz3},
+				#{bz4},
+				#{tips},
+				#{flag},
+				#{flag1},
+				#{qkje},
+				#{time},
+				#{type},
+				#{isSure}
+		)
+	</insert>
+	
+	<select id="findLastReportInfo2" parameterType="pd" resultType="pd">
+		sum(flag) flag,
+				 sum(cs) cs 
+			from (SELECT
+			CONVERT (
+				subString(flag ,- 1),
+				UNSIGNED INTEGER
+			) flag,
+			count(1) cs
+		FROM
+			userReport_info
+			where userId=#{saleId} and type=1
+		GROUP BY
+			id 
+		 and date_format(time,'%Y-%m-%d') &gt;=#{timeStart} 
+		 and date_format(time,'%Y-%m-%d') &lt;=#{timeEnd} ) a
+	</select>
+	
+	<insert id="insertVisitInfo" parameterType="pd">
+		insert into ddVisit_info(name,time,place,detailPlace) values(#{name},#{time},#{place},#{detailPlace}) 
+	</insert>
+	
+	<select id="findCountVisit" parameterType="pd" resultType="pd">
+		SELECT
+			IFNULL(count(c.name),0) bfl,
+			a.user_id userId,
+			  a.name
+			FROM
+				sys_user a
+			INNER JOIN sys_role b ON a.role_id = b.role_id
+			AND a.isQuit = 0
+			LEFT JOIN 
+				(select * from ddVisit_info group by name,place,date_format(time,'%Y-%m-%d'))  c ON c.name = a.name 
+			<if test="time !=null and time !=''">
+				and date_format(c.time,'%Y-%m') = #{time}
+			</if>	
+			WHERE
+				b.parent_Id = 'a8f76756b4dd4fbb8ca063bd76cb3fb5'
+			AND b.role_id NOT IN (
+				'fbe6f2f9535c4fce9f024f6cb999b2bd'
+			)
+			<if test="saleId !=null and saleId !=''">
+				and a.user_Id=#{saleId}
+			</if>
+			GROUP BY
+				a.user_id
+			
+	</select>
+	
+	<insert id="insertYjzb" parameterType="pd">
+		insert into yj_info(type,zbA,zbB,parentId,bfzb) values(7,#{zbA},#{zbB},#{parentId},#{bfzb})
+	</insert>
+	
+	<select id="findTargetRole" resultType="pd">
+		select a.targetRoleId,a.orgRoleId,a.userId,b.role_name targetName from userreport_info a left join sys_role b on a.targetRoleId=b.role_id where type=2 and isSure=1
+		and a.targetRoleId &lt;&gt;a.orgRoleId
+	</select>
+	
+	<update id="update" parameterType="pd">
+		update sys_user set role_Id=#{targetRoleId} where user_id=#{userId}
+	</update>
+	
+	
+	<select id="findbfOrQd" parameterType="pd" resultType="pd">
+		select * from(
+		SELECT
+			case when b.monthOrjd=1 or b.monthOrjd=2 or b.monthOrjd=3 
+			then
+			CONCAT(
+				a.year+1,
+				concat('-', LPAD(b.monthOrjd, 2, 0))
+			) 
+			else
+			CONCAT(
+				a.year,
+				concat('-', LPAD(b.monthOrjd, 2, 0))
+			)  end time,
+			IFNULL(b.targetDetail,0) targetDetail,
+			IFNULL(b.conditions,0) conditions,
+			b.userId saleId
+		FROM
+			yj_info a,
+			yj_info b
+		WHERE
+			a.type = #{type}
+		AND a.parentId = 0
+		AND b.parentId = a.id) a
+		where a.saleId=#{saleId}
+			<if test="time !=null and time !=''">
+					and a.time = #{time}
+			</if>	
+	</select>
+	
+	<select id="showNoticDetail" parameterType="pd" resultType="pd">
+		<if test="type==5">
+			select a.id,a.userId,b.name,c.role_name,a.bz1 dhl,a.bz2 yxkhs,a.tips,a.isSure from userReport_Info a,sys_user b,sys_role c where a.userId=b.user_id and c.role_id=b.role_id
+			and a.type=0 and a.id in
+			<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			<if test="time !=null and time !=''">
+				and a.time=	#{time}
+			</if>
+			<if test="userId !=null and userId !=''">
+				and a.userId=#{userId}
+			</if>
+		</if>
+		<if test="type==6">
+			select a.id,a.userId,b.name,c.role_name,a.bz1 dhl,a.bz2 yxkhs,a.tips,a.isSure from userReport_Info a,sys_user b,sys_role c where a.userId=b.user_id and c.role_id=b.role_id
+			and a.type=1 and a.id in
+			<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			<if test="time !=null and time !=''">
+				and	a.time=#{time}
+			</if>
+			<if test="userId !=null and userId !=''">
+			and a.userId=#{userId}
+			</if>
+		</if>
+		<if test="type==7">
+			SELECT
+				a.id,
+				a.targetRoleId,
+				a.userId,
+				a.bz1 dkje,
+				a.bz2 htsl,
+				a.bz3 ddje,
+				a.bz4 bfl,
+				a.tips,
+				a.isSure,
+				b. NAME,
+				c.role_name orginalName,
+				d.role_name targetName,
+				e.id xzId,
+				e.targetDetail jbxz
+			FROM
+				userReport_Info a
+				inner join 
+				sys_user b
+				on a.userId = b.user_id
+				left JOIN
+				sys_role c
+				on c.role_id = a.orgRoleId
+				left JOIN
+				sys_role d
+				on d.role_id = a.targetRoleId
+				left join
+				yjxz_info e
+				on a.userId=e.userId and e.flag=1
+			WHERE
+				a.type = 2 and a.id in
+			<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			<if test="time !=null and time !=''">
+				and a.time=#{time}	
+			</if>
+			<if test="userId !=null and userId !=''">
+			and a.userId=#{userId}
+			</if>
+		</if>
+	</select>
+	
+	<update id="updateIsSure" parameterType="pd">
+		update userreport_info set isSure=1 where id=#{id}
+	</update>
+	
+	<update id="updateXz" parameterType="pd">
+		update yjxz_info set targetDetail=#{mbxz} where id=#{xzId}
+	</update>
+</mapper>

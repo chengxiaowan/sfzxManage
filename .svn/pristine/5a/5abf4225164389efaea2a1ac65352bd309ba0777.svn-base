@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="VisitMapper">
+	<!--表名 -->
+	<sql id="tableName">
+		visit_info
+	</sql>
+
+	<!-- 合同列表(全部) -->
+	<select id="listPage" parameterType="page" resultType="pd">
+		select
+			a.id,
+			a.target,
+			a.visitman,
+			a.userId,
+			a.mobilPhone,
+			IFNULL(a.reason,'') reason,
+			IFNULL(a.evaluatSelf,'') evaluatSelf,
+			IFNULL(a.type,'') type,
+			IFNULL(a.collaborator,'') collaborator,
+			d.name collaboratorName,
+			c.name sqName,
+			e.name aduitName,
+			IFNULL(a.yjsc,'') yjsc,
+			IFNULL(a.yjts,'') yjts,
+			IFNULL(a.kssj,'') kssj,
+			IFNULL(a.ksrq,'') ksrq,
+			IFNULL(a.yjhdwsj,'') yjhdwsj,
+			IFNULL(date_format(a.yjhdwrq,'%Y-%m-%d '),'') yjhdwrq,
+			IFNULL(a.yqxg,'') yqxg,
+			IFNULL(a.sjhgssj,'') sjhgssj,
+			IFNULL(date_format(a.sjhgsrq,'%Y-%m-%d'),'') sjhgsrq,
+			a.wcqk,
+			a.wwcyy,
+			a.address,
+			IFNULL(a.auditStatus,'') auditStatus,
+			IFNULL(a.leaderShip,'') leaderShip,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			visit_info a
+		left join 	
+			sys_user c
+			on a.userId =c.user_id  and c.isQuit=0 <!-- 申请人(执行人) -->
+		left join 	
+			sys_user e
+			on a.auditerId =e.user_id  and e.isQuit=0<!-- 审核人 -->
+		left join 	
+			sys_user d
+			on a.collaborator =d.user_id  and d.isQuit=0 <!-- 协作人 -->
+		where a.delFlag = 0  and a.sqorzp=0 
+		<if test="pd.keywords != null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			c.name LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.userId != null and pd.userId != ''"><!-- 注册时间检索 -->
+			and a.userId = #{pd.userId} 
+		</if>
+		<if test="pd.type != null and pd.type != ''"><!-- 注册时间检索 -->
+			and a.type = #{pd.type} 
+		</if>
+		<if test="pd.auditStatus != null and pd.auditStatus != ''"><!-- 注册时间检索 -->
+			and a.auditStatus = #{pd.auditStatus} 
+		</if>
+		<!-- 审核状态下     运作总监-->
+		<if test="pd.flag==3"><!-- 注册时间检索 -->
+			and (a.userId in(select user_id from sys_user where role_id in ('02178e62f17b4926bb7014f3ad5a1ebe','45efba0a0fa946aebf7befe614c74e55'))
+					or a.userId=#{pd.zjid}
+				) 
+		</if>
+		<!-- 审核状态下 销售总监 -->
+		<if test="pd.flag==4">
+			and (a.userId in(select user_id from sys_user where role_id='b729e9334ad64c15a4e47d88b8c2638f') 
+			or a.userId=#{pd.zjid})
+		</if>
+		<if test="pd.createTimeStart != null and pd.createTimeStart != ''"><!-- 注册时间检索 -->
+			and a.evaluateTime &gt;= #{pd.createTimeStart}
+		</if>
+		<if test="pd.createTimeEnd != null and pd.createTimeEnd != ''"><!-- 注册时间检索 -->
+			and a.evaluateTime &lt;= #{pd.createTimeEnd}
+		</if>
+		order by a.id desc
+	</select>
+	
+	
+	<insert id="save"  parameterType="pd" useGeneratedKeys="true"  keyProperty="id">
+		insert into
+			<include refid="tableName"></include>
+		(
+			target,
+			visitman,
+			mobilPhone,
+			type,
+			collaborator,
+			userId,
+			yjsc,
+			yjts,
+			kssj,
+			ksrq,
+			address,
+			yjhdwsj,
+			yjhdwrq,
+			reason,
+			yqxg
+		)values
+		(
+			#{target},
+			#{visitman},
+			#{mobilPhone},
+			#{type},
+			#{collaborator},
+			#{userId},
+			#{yjsc},
+			#{yjts},
+			#{kssj},
+			#{ksrq},
+			#{address},
+			#{yjhdwsj},
+			#{yjhdwrq},
+			#{reason},
+			#{yqxg}
+		)
+	</insert>
+	
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+			a.id,
+			a.target,
+			a.visitman,
+			a.userId,
+			a.address,
+			a.mobilPhone,
+			IFNULL(a.reason,'') reason,
+			IFNULL(a.evaluatSelf,'') evaluatSelf,
+			IFNULL(a.type,'') type,
+			IFNULL(a.collaborator,'') collaborator,
+			d.name collaboratorName,
+			c.name sqName,
+			e.name aduitName,
+			IFNULL(a.yjsc,'') yjsc,
+			IFNULL(a.yjts,'') yjts,
+			IFNULL(a.kssj,'') kssj,
+			IFNULL(a.ksrq,'') ksrq,
+			IFNULL(a.yjhdwsj,'') yjhdwsj,
+			IFNULL(date_format(a.yjhdwrq,'%Y-%m-%d'),'') yjhdwrq,
+			IFNULL(a.yqxg,'') yqxg,
+			IFNULL(a.sjhgssj,'') sjhgssj,
+			IFNULL(date_format(a.sjhgsrq,'%Y-%m-%d'),'') sjhgsrq,
+			a.wcqk,
+			a.wwcyy,
+			IFNULL(a.auditStatus,'') auditStatus,
+			IFNULL(a.leaderShip,'') leaderShip,
+			IFNULL(date_format(a.createTime,'%Y-%m-%d %H:%i:%s'),'') createTime,
+			IFNULL(date_format(a.editTime,'%Y-%m-%d %H:%i:%s'),'') editTime
+		from
+			visit_info a
+		left join 	
+			sys_user c
+			on a.userId =c.user_id  and c.isQuit=0 <!-- 申请人(执行人) -->
+		left join 	
+			sys_user e
+			on a.auditerId =e.user_id  and e.isQuit=0<!-- 审核人 -->
+		left join 	
+			sys_user d
+			on a.collaborator =d.user_id  and d.isQuit=0 <!-- 协作人 -->
+		where a.delFlag = 0 and a.id=#{id}
+	</select>
+	
+	<insert id="saveWarnInfo"  parameterType="pd">
+	insert into
+		warn_info
+	(
+		relateId,
+		userId,
+		type,
+		doId
+	)values
+	(
+		#{id},
+		#{userId},
+		0,
+		#{doId}
+	)
+	</insert>
+	
+	<update id="update" parameterType="pd">
+		update
+				<include refid="tableName"></include>
+				set editTime = #{editTime}
+					,target = #{target}
+					,visitman = #{visitman}
+					,mobilPhone = #{mobilPhone}
+					,type = #{type}
+					,reason = #{reason}
+					,collaborator = #{collaborator}
+					,yjsc = #{yjsc}
+					,yjts = #{yjts}
+					,kssj = #{kssj}
+					,ksrq = #{ksrq}
+					,yjhdwsj = #{yjhdwsj}
+					,yjhdwrq = #{yjhdwrq}
+					,yqxg = #{yqxg}
+					
+					,auditStatus = #{auditStatus}
+					,leaderShip = #{leaderShip}
+					,auditerId=#{auditerId}
+					
+					,evaluatSelf = #{evaluatSelf}
+					,auditerId = #{auditerId}
+					,sjhgssj = #{sjhgssj}
+					,sjhgsrq = #{sjhgsrq}
+					,wcqk = #{wcqk}
+					,wwcyy = #{wwcyy}
+					,leaderShip = #{leaderShip}
+				where id = #{id}
+	</update>
+	
+	
+	<delete id="delete" parameterType="String">
+		update
+		<include refid="tableName"></include>
+		set delFlag = 1
+		where
+		id in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<update id="updateWranInfo" parameterType="pd">
+		update warn_info set iscompleted=1 where userId=#{userId} and type=1 		
+	</update>
+	
+	<update id="updateWranInfo1" parameterType="pd">
+		update warn_info set iscompleted=1 where type=0 and relateId=#{id} 		
+	</update>
+</mapper>

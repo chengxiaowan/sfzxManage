@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactsWorkspaceSettings">
+    <artifacts-to-build>
+      <artifact name="sfzxManage:war exploded" />
+    </artifacts-to-build>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b044e89b-86b4-40a5-8fb5-da1b13d72ddd" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings">
+    <execution>
+      <executable />
+    </execution>
+  </component>
+  <component name="LogFilters">
+    <option name="FILTER_ERRORS" value="false" />
+    <option name="FILTER_WARNINGS" value="false" />
+    <option name="FILTER_INFO" value="true" />
+    <option name="FILTER_DEBUG" value="true" />
+    <option name="CUSTOM_FILTER" />
+  </component>
+  <component name="ProjectId" id="1b3j2ktSbNIGy1cZVDBAhEeYWZ7" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/WebRoot" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="project.structure.last.edited" value="模块" />
+    <property name="project.structure.proportion" value="0.15" />
+    <property name="project.structure.side.proportion" value="0.2" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\WEB-INF\jsp\business" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\static\js\include\page" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\static\js\include\page" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\WEB-INF\jsp\business" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\static\page" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\WEB-INF\jsp\business\workBenchManage" />
+      <recent name="E:\d\workspaceNew\sfzxManage\WebRoot\WEB-INF" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="Tomcat 8.5.54" type="#com.intellij.j2ee.web.tomcat.TomcatRunConfigurationFactory" factoryName="Local" APPLICATION_SERVER_NAME="Tomcat 8.5.54" ALTERNATIVE_JRE_ENABLED="true" ALTERNATIVE_JRE_PATH="1.8" nameIsGenerated="true">
+      <option name="UPDATING_POLICY" value="restart-server" />
+      <deployment>
+        <artifact name="sfzxManage:war exploded">
+          <settings>
+            <option name="CONTEXT_PATH" value="/" />
+          </settings>
+        </artifact>
+      </deployment>
+      <server-settings>
+        <option name="BASE_DIRECTORY_NAME" value="Unnamed_sfzxManage" />
+      </server-settings>
+      <predefined_log_file enabled="true" id="Tomcat" />
+      <predefined_log_file enabled="true" id="Tomcat Catalina" />
+      <predefined_log_file id="Tomcat Manager" />
+      <predefined_log_file id="Tomcat Host Manager" />
+      <predefined_log_file id="Tomcat Localhost Access" />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="64451" />
+      </RunnerSettings>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Cover">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Debug">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <ConfigurationWrapper VM_VAR="JAVA_OPTS" RunnerId="Run">
+        <option name="USE_ENV_VARIABLES" value="true" />
+        <STARTUP>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </STARTUP>
+        <SHUTDOWN>
+          <option name="USE_DEFAULT" value="true" />
+          <option name="SCRIPT" value="" />
+          <option name="VM_PARAMETERS" value="" />
+          <option name="PROGRAM_PARAMETERS" value="" />
+        </SHUTDOWN>
+      </ConfigurationWrapper>
+      <method v="2">
+        <option name="Make" enabled="true" />
+        <option name="BuildArtifacts" enabled="true">
+          <artifact name="sfzxManage:war exploded" />
+        </option>
+      </method>
+    </configuration>
+  </component>
+  <component name="SvnConfiguration" cleanupOnStartRun="true">
+    <configuration>C:\Users\10451\AppData\Roaming\Subversion</configuration>
+    <supportedVersion>125</supportedVersion>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b044e89b-86b4-40a5-8fb5-da1b13d72ddd" name="Default Changelist" comment="" />
+      <created>1587867465500</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1587867465500</updated>
+      <workItem from="1587867469906" duration="1416000" />
+      <workItem from="1587871319346" duration="1196000" />
+      <workItem from="1587893459245" duration="556000" />
+      <workItem from="1587959484497" duration="3898000" />
+      <workItem from="1588917869146" duration="50000" />
+      <workItem from="1589176539236" duration="846000" />
+      <workItem from="1589177789985" duration="737000" />
+      <workItem from="1589178875954" duration="4719000" />
+      <workItem from="1589246187925" duration="4218000" />
+      <workItem from="1589251558107" duration="11615000" />
+      <workItem from="1589259790096" duration="4356000" />
+      <workItem from="1589333042011" duration="1811000" />
+      <workItem from="1589351528970" duration="4773000" />
+      <workItem from="1589423690052" duration="521000" />
+      <workItem from="1589786681417" duration="4423000" />
+      <workItem from="1589851280302" duration="867000" />
+      <workItem from="1592469174399" duration="94000" />
+      <workItem from="1592469281689" duration="2029000" />
+      <workItem from="1592529599455" duration="593000" />
+      <workItem from="1592791723318" duration="1296000" />
+      <workItem from="1592894030798" duration="597000" />
+      <workItem from="1593325868797" duration="811000" />
+      <workItem from="1593393992796" duration="591000" />
+      <workItem from="1593414083678" duration="413000" />
+      <workItem from="1593414523083" duration="167000" />
+      <workItem from="1593414707348" duration="984000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="2" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="740" y="324" key="#BuildArtifactsBeforeRunChooser" timestamp="1593414787101">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="740" y="324" key="#BuildArtifactsBeforeRunChooser/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414787101" />
+    <state x="647" y="85" key="#Tomcat_8.5.54" timestamp="1593414885925">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="647" y="85" key="#Tomcat_8.5.54/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414885925" />
+    <state x="734" y="396" key="#Tomcat_Server" timestamp="1593414166585">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="734" y="396" key="#Tomcat_Server/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414166585" />
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1593415001128">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415001128" />
+    <state x="440" y="94" key="#项目结构" timestamp="1593414598249">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="440" y="94" key="#项目结构/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414598249" />
+    <state x="740" y="260" key="FileChooserDialogImpl" timestamp="1593414871798">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="740" y="260" key="FileChooserDialogImpl/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414871798" />
+    <state width="1293" height="282" key="GridCell.Tab.0.bottom" timestamp="1593415010597">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415010597" />
+    <state width="1293" height="282" key="GridCell.Tab.0.center" timestamp="1593415010597">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415010597" />
+    <state width="1293" height="282" key="GridCell.Tab.0.left" timestamp="1593415010597">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415010597" />
+    <state width="1293" height="282" key="GridCell.Tab.0.right" timestamp="1593415010597">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415010597" />
+    <state width="1293" height="282" key="GridCell.Tab.1.bottom" timestamp="1593415012548">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.1.bottom/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415012548" />
+    <state width="1293" height="282" key="GridCell.Tab.1.center" timestamp="1593415012548">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.1.center/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415012548" />
+    <state width="1293" height="282" key="GridCell.Tab.1.left" timestamp="1593415012548">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.1.left/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415012548" />
+    <state width="1293" height="282" key="GridCell.Tab.1.right" timestamp="1593415012548">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415012548" />
+    <state width="1293" height="282" key="GridCell.Tab.2.bottom" timestamp="1593415011719">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.2.bottom/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415011719" />
+    <state width="1293" height="282" key="GridCell.Tab.2.center" timestamp="1593415011719">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.2.center/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415011719" />
+    <state width="1293" height="282" key="GridCell.Tab.2.left" timestamp="1593415011719">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.2.left/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415011719" />
+    <state width="1293" height="282" key="GridCell.Tab.2.right" timestamp="1593415011719">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1293" height="282" key="GridCell.Tab.2.right/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593415011719" />
+    <state x="440" y="94" key="SettingsEditor" timestamp="1593414561345">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="440" y="94" key="SettingsEditor/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1593414561345" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/com/yocto/quartz/QuartzJobFactory.java</url>
+          <line>42</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
